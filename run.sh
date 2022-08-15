@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #declare -i seed=47
-END=98
+END=43
 for ((j=42;j<=END;j++)); do
     echo "Starting server"
-    #python3 runserver.py --seed=${j} &
-    python3 runserver_fedadagrad.py --seed=${j} &
+    python3 runserver.py --seed=${j} &
+    #python3 runserver_fedadagrad.py --seed=${j} &
     sleep 3  # Sleep for 3s to give the server enough time to start
 
 

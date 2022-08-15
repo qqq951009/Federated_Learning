@@ -102,10 +102,9 @@ def split_data(df,testsize,seed):
 
 def load_data(hospital_id: int):
     df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
-    df = df[["Class","LOC", "FullDate","Gender", "Age", "CIG", "ALC", "BN",    #"FullDate",
-            "MAGN", "AJCCstage", "DIFF", "LYMND", "TMRSZ",
-            "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]]
+    df = df[["Class","LOC", "FullDate","Gender", "Age",  
+            "AJCCstage", "DIFF", "LYMND", "TMRSZ",
+            "SSF1", "SSF2"]]
     df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
     df = df[df['LOC'] == hospital_id]
 
@@ -131,9 +130,9 @@ model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2
 hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
 y_pred = model.predict(x_test)
 auc_val_result[str(args.hospital)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv('./data/local_val_df.csv', index_col=[0])
+val_df = pd.read_csv('./data_folder/local_val_df.csv', index_col=[0])
 val_df.loc[seed,f'site{args.hospital}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv('local_val_df.csv')
+val_df.to_csv('./data_folder/local_val_df.csv')
 print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')
 
 # Use Local model to evaluate other hospital : 
@@ -145,14 +144,15 @@ for i in hospital_list:
 auc_val_result = dict(sorted(auc_val_result.items()))  # Sort the AUC result dict
 print(auc_val_result)
 
-with open(f'./data/Local_AUC_val_{args.hospital}.pickle', 'wb') as f:
-    pickle.dump(auc_val_result, f)
+#with open(f'./data_folder/Local_AUC_val_{args.hospital}.pickle', 'wb') as f:
+#    pickle.dump(auc_val_result, f)
 
-with open(f'./data/Local_AUC_{args.hospital}.pickle', 'wb') as f:
-    pickle.dump(hist.history['val_auc'], f)
+#with open(f'./data_folder/Local_AUC_{args.hospital}.pickle', 'wb') as f:
+#    pickle.dump(hist.history['val_auc'], f)
 
-local_auc_df = pd.read_csv(f'./data/local_auc_df{args.hospital}.csv')
-local_auc_df[f'seed{seed}'] = hist.history['val_auc']
-local_auc_df.to_csv(f'./data/local_auc_df{args.hospital}.csv',index=False)
+#local_auc_df = pd.read_csv(f'./data_folder/local_auc_df{args.hospital}.csv')
+#local_auc_df[f'seed{seed}'] = hist.history['val_auc']
+#local_auc_df.to_csv(f'./data_folder/local_auc_df{args.hospital}.csv',index=False)
+
 '''local_auc_df = pd.DataFrame(data = hist.history['val_auc'], columns=[f'seed{seed}'])
 local_auc_df.to_csv(f'local_auc_df{args.hospital}.csv',index=False)'''

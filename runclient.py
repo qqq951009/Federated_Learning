@@ -94,10 +94,9 @@ def split_data(df,testsize,seed):
 def load_data(hospital_id: int):
     assert hospital_id in range(10)
     df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
-    df = df[["Class","LOC", "FullDate","Gender", "Age", "CIG", "ALC", "BN",    #"FullDate",
-            "MAGN", "AJCCstage", "DIFF", "LYMND", "TMRSZ",
-            "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]]
+    df = df[["Class","LOC", "FullDate","Gender", "Age",  
+            "AJCCstage", "DIFF", "LYMND", "TMRSZ",
+            "SSF1", "SSF2"]]
     df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
     df = df[df['LOC'] == hospital_id]
 
@@ -188,9 +187,9 @@ class CifarClient(fl.client.NumPyClient):
             with open('FL_AUC_val_'+str(self.cid)+'.pickle', 'wb') as f:
                 pickle.dump(self.auc_val_result, f)
             if self.cid==2:
-                val_df = pd.read_csv('./data_folder/df_fedadagrad.csv', index_col=[0])
+                val_df = pd.read_csv('./data_folder/df_fedavg_1.csv', index_col=[0])
                 val_df.loc[seed] =  [i[0] for i in self.auc_val_result.values()]
-                val_df.to_csv('./data_folder/df_fedadagrad.csv')
+                val_df.to_csv('./data_folder/df_fedavg_1.csv')
         # Evaluate global model parameters on the local test data and return results
         loss,precision,recall,_ = self.model.evaluate(self.x_test, self.y_test)
         results = {"loss" : loss, "auc":roc_auc_score(self.y_test,y_pred)}

@@ -44,10 +44,9 @@ METRICS = [
 
 df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
 
-df = df[["Class","LOC","FullDate","Gender", "Age", "CIG", "ALC", "BN",     #"FullDate",
-            "MAGN", "AJCCstage", "DIFF", "LYMND", "TMRSZ",
-            "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]]
+df = df[["Class","LOC","FullDate","Gender", "Age",
+        "AJCCstage", "DIFF", "LYMND", "TMRSZ",
+        "SSF1", "SSF2"]]
 df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
 df = df[df['LOC'] == 2]
 
@@ -101,7 +100,7 @@ x_train,x_test,y_train,y_test = split_data(df,0.2,seed)
 def main() -> None:
     opt_adam = Adam(learning_rate=lr_rate)
     model = Sequential() 
-    model.add(Dense(32, activation='relu', input_shape=(19,))) #,kernel_regularizer='l2'
+    model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
     model.add(Dense(16, activation='relu'))
     model.add(Dense(10, activation='relu'))    
     model.add(Dense(1, activation='sigmoid'))
