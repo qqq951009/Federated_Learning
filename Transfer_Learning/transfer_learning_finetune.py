@@ -65,14 +65,14 @@ def split_data(df,testsize,seed):
 
 def load_data():
     df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
-    df = df[["Class","LOC", "FullDate","Gender", "Age", "CIG", "ALC", "BN",    #"FullDate",
-            "MAGN", "AJCCstage", "DIFF", "LYMND", "TMRSZ",
-            "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]]
+    df = df[["Class","LOC", "FullDate","Gender", "Age",  
+            "AJCCstage", "DIFF", "LYMND", "TMRSZ",
+            "SSF1", "SSF2"]]
+
     df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
     df = df[df['LOC'] == hospital]
 
-    # Ddata preprocess 
+    # Ddata preprocess
     df = drop_and_fill(df)
     df = target_encoding_loo(df)
     x_train,x_test,y_train,y_test = split_data(df,0.2,seed)

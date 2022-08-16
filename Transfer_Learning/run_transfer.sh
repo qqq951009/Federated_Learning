@@ -1,7 +1,7 @@
 #!/bin/bash
 
 END=98
-for ((seed=85;seed<=END;seed++)); do
+for ((seed=45;seed<=END;seed++)); do
     echo "Start Training Pretrained Model"
     python3 transfer_learning_pretrained.py --seed=${seed}
     sleep 5
