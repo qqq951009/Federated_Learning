@@ -130,9 +130,9 @@ model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2
 hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
 y_pred = model.predict(x_test)
 auc_val_result[str(args.hospital)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv('./data_folder/local_val_df.csv', index_col=[0])
+val_df = pd.read_csv('./output_folder/local_val_df.csv', index_col=[0])
 val_df.loc[seed,f'site{args.hospital}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv('./data_folder/local_val_df.csv')
+val_df.to_csv('./output_folder/local_val_df.csv')
 print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')
 
 # Use Local model to evaluate other hospital : 

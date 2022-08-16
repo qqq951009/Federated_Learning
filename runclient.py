@@ -149,14 +149,15 @@ class CifarClient(fl.client.NumPyClient):
         self.record+=history.history["val_auc"]
 
         if config['rnd'] == 20:
-            fl_auc_df = pd.read_csv(f'./data_folder/fl_auc_df{self.cid}.csv')
+            print("output length : ",len(self.record))
+            fl_auc_df = pd.read_csv(f'./output_folder/fl_auc_df{self.cid}.csv')
             fl_auc_df[f'seed{seed}'] = self.record
-            fl_auc_df.to_csv(f'./data_folder/fl_auc_df{self.cid}.csv',index=False)
-            '''fl_auc_df = pd.DataFrame(data = self.record,columns = [f'seed{seed}'])
-            fl_auc_df.to_csv(f'fl_df{self.cid}.csv',index=False)'''
+            fl_auc_df.to_csv(f'./output_folder/fl_auc_df{self.cid}.csv',index=False)
+            #fl_auc_df = pd.DataFrame(data = self.record,columns = [f'seed{seed}'])
+            #fl_auc_df.to_csv(f'./output_folder/fl_auc_df{self.cid}.csv',index=False)
 
-            with open('FL_AUC_'+str(self.cid)+'.pickle', 'wb') as f:
-                pickle.dump(self.record, f)
+            #with open('./output_folder/FL_AUC_'+str(self.cid)+'.pickle', 'wb') as f:
+            #    pickle.dump(self.record, f)
 
         return parameters_prime, num_examples_train, results
 
@@ -184,12 +185,12 @@ class CifarClient(fl.client.NumPyClient):
                 y_val_pred = self.model.predict(x_val)
                 self.auc_val_result[str(i)] = [roc_auc_score(y_val,y_val_pred)]
             self.auc_val_result = dict(sorted(self.auc_val_result.items()))         # Sort the dict
-            with open('FL_AUC_val_'+str(self.cid)+'.pickle', 'wb') as f:
-                pickle.dump(self.auc_val_result, f)
+            #with open('./output_folder/FL_AUC_val_'+str(self.cid)+'.pickle', 'wb') as f:
+            #    pickle.dump(self.auc_val_result, f)
             if self.cid==2:
-                val_df = pd.read_csv('./data_folder/df_fedavg_1.csv', index_col=[0])
+                val_df = pd.read_csv('./output_folder/df_fedavg_1.csv', index_col=[0])
                 val_df.loc[seed] =  [i[0] for i in self.auc_val_result.values()]
-                val_df.to_csv('./data_folder/df_fedavg_1.csv')
+                val_df.to_csv('./output_folder/df_fedavg_1.csv')
         # Evaluate global model parameters on the local test data and return results
         loss,precision,recall,_ = self.model.evaluate(self.x_test, self.y_test)
         results = {"loss" : loss, "auc":roc_auc_score(self.y_test,y_pred)}
@@ -224,7 +225,7 @@ def main() -> None:
 
     # Start Flower client
     client = CifarClient(model, x_train, y_train, x_test, y_test, cid, record)
-    fl.client.start_numpy_client("[::]:5656", client=client)
+    fl.client.start_numpy_client("[::]:8000", client=client)
 
 if __name__ == "__main__":
     main()
