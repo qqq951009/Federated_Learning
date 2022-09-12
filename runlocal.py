@@ -5,37 +5,30 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
-import configparser
 from keras import metrics
 import matplotlib.pyplot as plt
 import scikitplot as skplt
-import tensorflow_addons as tfa
 from sklearn.utils import shuffle
-from imblearn.combine import SMOTETomek, SMOTEENN 
-from imblearn.over_sampling import SMOTE
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Embedding, Flatten, Dropout
-from sklearn.model_selection import train_test_split
 from tensorflow.keras.optimizers import Adam, Adagrad
 from sklearn.metrics import roc_auc_score
-from category_encoders import TargetEncoder, LeaveOneOutEncoder
-
-
+import utils
 
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--hospital", type=int, choices=range(0, 10), required=True)
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
+parser.add_argument("--seer", type=int, required=True)
+parser.add_argument("--encode_dict", type=str, required=True)   # put weight or average
 args = parser.parse_args()
 
 #SEED
-seed = args.seed
-random.seed(seed)
-np.random.seed(seed)
-tf.random.set_seed(seed)
+
 lr_rate = 0.001
 epoch = 100
+size=0.2
 auc_val_result = {}
-hospital_list = [2,3,6,8]
+hospital_list = [2,3,6,8,9]
 
 set_thres=0.19
 METRICS = [
@@ -44,79 +37,50 @@ METRICS = [
       metrics.AUC()
 ]
 
-def imputation(df,method):
-  if method == 'fill9':
-    df = df.fillna(9)
-  elif method == 'drop':
-    df = df.dropna()
-  for i in df.columns:
-    df[i] = df[i].astype(int)
-  return df
+site_id = args.hospital
+seed = args.seed
+seer = args.seer
+average_weight = args.encode_dict
 
-def drop_and_fill(df):
-  df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
-  df['null_count'] = list(df.isna().sum(axis=1))
-  df = df.reset_index(drop = True)
-  index = [i.tolist() for i in np.where( (df['null_count']  >= 9) & (df['year'] <= 2010))][0]
-  df = df.iloc[~df.index.isin(index)]
-  df = df.fillna(df.median())
-  df = df.drop(columns = ['year','null_count','FullDate'])
-  df = df.astype(int)
-  return df
+random.seed(seed)
+np.random.seed(seed)
+tf.random.set_seed(seed)
 
-# Target encoding leave one out
-def target_encoding_loo(df):
-  columns = df.columns[2:]
-  x = df.drop(columns = ['Class'])
-  y = df['Class']
-  #encoder = LeaveOneOutEncoder(cols=columns ,sigma = 0.05)
-  encoder = TargetEncoder(cols=columns,smoothing=0.05)
-  df_target = encoder.fit_transform(x,y)
-  df_target['Class'] = y
-  return df_target
+imputation = utils.imputation()
+enc_dict = utils.choose_dict(average_weight,seer)
+mapping = utils.mapping()
+split = utils.split_data(size,seed)
 
-# SMOTE oversampling
-def smote(x_train,y_train,sampling_strategy):
-    smote = SMOTE(random_state=seed,sampling_strategy=sampling_strategy)
-    smote_tomek = SMOTETomek(random_state = seed,sampling_strategy = sampling_strategy)
-    smote_enn = SMOTEENN(random_state = seed,sampling_strategy = sampling_strategy)
+if seer == 1:
+    columns = ["Class","LOC", "Gender", "Age", "AJCCstage", "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2"]
+    
+    if site_id != 9:
+        df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
+        df = df[columns]
+        df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+        df = df[df['LOC'] == site_id]
+        dfimp = df.fillna(9)
+        dfmap = mapping(enc_dict(),dfimp)
 
-    #x_train_smote,y_train_smote = smote.fit_resample(x_train,y_train)
-    #x_train_smote,y_train_smote = smote_tomek.fit_resample(x_train,y_train)
-    x_train_smote,y_train_smote = smote_enn.fit_resample(x_train,y_train)
-    return x_train_smote, y_train_smote
+    elif site_id == 9:
+        df = pd.read_csv(r'/home/refu0917/lungcancer/data/seerdb.csv',index_col = [0])
+        df = df[columns]
+        df = df[df['LOC'] == site_id]
+        dfmap = mapping(enc_dict(),df)
 
-def split_data(df,testsize,seed):
-    df = df.drop(columns=['LOC'])
-    trainset,testset = train_test_split(df,test_size = testsize,stratify=df['Class'],random_state=seed)
-    x_train = trainset.drop(columns=['Class'])
-    x_test = testset.drop(columns=['Class'])
-    y_train = trainset['Class']
-    y_test = testset['Class']
-
-    # Oversampling
-    #x_train,y_train = smote(x_train,y_train,0.5)
-    #x_train,y_train = shuffle(x_train,y_train)
-    return x_train,x_test,y_train ,y_test 
-
-
-def load_data(hospital_id: int):
+elif seer == 0:
+    columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
+            "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
+            "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
+            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
     df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
-    df = df[["Class","LOC", "FullDate","Gender", "Age",  
-            "AJCCstage", "DIFF", "LYMND", "TMRSZ",
-            "SSF1", "SSF2"]]
-    df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
-    df = df[df['LOC'] == hospital_id]
+    df = df[columns]
+    df["Class"] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+    df = df[df['LOC'] == site_id]
+    dfimp = imputation(df, 'drop_and_fill')
+    dfmap = mapping(enc_dict(),dfimp)
 
-    # Ddata preprocess 
-    #df = imputation(df,'fill9')
-    df = drop_and_fill(df)
-    df = target_encoding_loo(df)
-    x_train,x_test,y_train,y_test = split_data(df,0.2,seed)
-    return x_train,x_test,y_train,y_test
-
-# Load local data partition
-x_train, x_test, y_train, y_test = load_data(args.hospital)
+x_train,x_test,y_train,y_test = split(dfmap)
 
 opt_adam = Adam(learning_rate=lr_rate)
 model = Sequential() 
@@ -129,20 +93,20 @@ model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2
 
 hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
 y_pred = model.predict(x_test)
-auc_val_result[str(args.hospital)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv('./output_folder/local_val_df.csv', index_col=[0])
-val_df.loc[seed,f'site{args.hospital}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv('./output_folder/local_val_df.csv')
+#auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
+val_df = pd.read_csv('./output_folder/local_val_df_average.csv', index_col=[0])
+val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
+val_df.to_csv('./output_folder/local_val_df_average.csv')
 print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')
 
 # Use Local model to evaluate other hospital : 
-hospital_list.remove(args.hospital)
+'''hospital_list.remove(args.hospital)
 for i in hospital_list:
   _,x_val,_,y_val = load_data(i)
   y_pred_val = model.predict(x_val)
   auc_val_result[str(i)] = [roc_auc_score(y_val, y_pred_val)]
 auc_val_result = dict(sorted(auc_val_result.items()))  # Sort the AUC result dict
-print(auc_val_result)
+print(auc_val_result)'''
 
 #with open(f'./data_folder/Local_AUC_val_{args.hospital}.pickle', 'wb') as f:
 #    pickle.dump(auc_val_result, f)

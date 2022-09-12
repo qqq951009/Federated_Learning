@@ -1,7 +1,7 @@
 #!/bin/bash
-
-END=98
+seer=1
+END=43
 for ((seed=42;seed<=END;seed++)); do
-    python3 centralized.py --seed=${seed}
-    sleep 3
+    python3 centralized.py --seed=${seed} --seer=${seer}
+    #sleep 1
 done

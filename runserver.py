@@ -17,13 +17,21 @@ from sklearn.model_selection import train_test_split
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from category_encoders import TargetEncoder, LeaveOneOutEncoder
 from tensorflow.keras.layers import Dense, Embedding, Flatten,Dropout
+import configparser
+import utils
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+
 
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
+parser.add_argument("--seer", type=int, required=True)
 args = parser.parse_args()
 
 #SEED
 seed = args.seed
+seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
@@ -42,59 +50,36 @@ METRICS = [
       metrics.AUC()
 ]
 
+imputation = utils.imputation()
+enc_dict = utils.choose_dict('average',seer)
+mapping = utils.mapping()
+split = utils.split_data(0.2,seed)
+
+
 df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
 
-df = df[["Class","LOC","FullDate","Gender", "Age",
-        "AJCCstage", "DIFF", "LYMND", "TMRSZ",
-        "SSF1", "SSF2"]]
-df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
-df = df[df['LOC'] == 2]
+if seer == 1:
+  columns = ["Class","LOC", "Gender", "Age", "AJCCstage", "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2"]
+  df = df[columns]
+  df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+  df = df[df['LOC'] == 2]
+  dfimp = df.fillna(9)
+  dfmap = mapping(enc_dict(),dfimp)
+  min_client = 5
 
-def imputation(df,method):
-  if method == 'fill9':
-    df = df.fillna(9)
-  elif method == 'drop':
-    df = df.dropna()
-  for i in df.columns:
-    df[i] = df[i].astype(int)
-  return df
+elif seer == 0:
+  columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
+            "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
+            "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
+            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
+  df = df[columns]
+  df["Class"] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+  df = df[df['LOC'] == 2]
+  dfimp = imputation(df, 'drop_and_fill')
+  dfmap = mapping(enc_dict(),dfimp)
+  min_client = 4
 
-def drop_and_fill(df):
-  df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
-  df['null_count'] = list(df.isna().sum(axis=1))
-  df = df.reset_index(drop = True)
-  index = [i.tolist() for i in np.where( (df['null_count']  >= 9) & (df['year'] <= 2010))][0]
-  df = df.iloc[~df.index.isin(index)]
-  df = df.fillna(df.median())
-  df = df.drop(columns = ['year','null_count','FullDate'])
-  df = df.astype(int)
-  return df
-
-#target encoding leave one out
-def target_encoding_loo(df):
-  columns = df.columns[2:]
-  x = df.drop(columns = ['Class'])
-  y = df['Class']
-  #encoder = LeaveOneOutEncoder(cols=columns ,sigma = 0.05)
-  encoder = TargetEncoder(cols=columns,smoothing=0.05)
-  df_target = encoder.fit_transform(x,y)
-  df_target['Class'] = y
-  return df_target
-
-def split_data(df,testsize,seed):
-    df = df.drop(columns=['LOC'])
-    trainset,testset = train_test_split(df,test_size = testsize,stratify=df['Class'],random_state=seed)
-    x_train = trainset.drop(columns=['Class'])
-    x_test = testset.drop(columns=['Class'])
-    y_train = trainset['Class']
-    y_test = testset['Class']
-    return x_train,x_test,y_train ,y_test 
-
-#data preprocess pipeline
-#df = imputation(df,'fill9')
-df = drop_and_fill(df)
-df = target_encoding_loo(df)
-x_train,x_test,y_train,y_test = split_data(df,0.2,seed)
+x_train,x_test,y_train,y_test = split(dfmap)
 
 
 def main() -> None:
@@ -108,9 +93,9 @@ def main() -> None:
 
     # Create strategy
     strategy = fl.server.strategy.FedAvg(
-        min_fit_clients=4,
-        min_eval_clients=4,
-        min_available_clients=4,
+        min_fit_clients=min_client,
+        min_eval_clients=min_client,
+        min_available_clients=min_client,
         #eval_fn=get_eval_fn(model),
         on_fit_config_fn=fit_config,
         on_evaluate_config_fn=evaluate_config,
@@ -118,10 +103,10 @@ def main() -> None:
     )
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("[::]:8000", config={"num_rounds":rounds}, strategy=strategy)
+    fl.server.start_server("[::]:7000", config={"num_rounds":rounds}, strategy=strategy)
 
 
-def get_eval_fn(model):
+'''def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` 
@@ -138,7 +123,7 @@ def get_eval_fn(model):
         
         return loss, {"AUC": roc_auc_score(y_test, y_pred)}
 
-    return evaluate
+    return evaluate'''
 
 
 def fit_config(rnd: int):
