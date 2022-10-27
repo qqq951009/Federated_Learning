@@ -11,26 +11,28 @@ from imblearn.under_sampling import RandomUnderSampler, NearMiss
 from category_encoders import TargetEncoder, LeaveOneOutEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
-class imputation():
-    def __call__(self, df, imp_method):
-        if 'FullDate' not in df.columns:
-            return df
-        else:
-            if imp_method == 'fill9':
-                df_imp = df.fillna(9)
-            if imp_method == 'drop':
-                df_imp = df.dropna()
-            if imp_method == 'drop_and_fill':
-                df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
-                df['null_count'] = list(df.isna().sum(axis=1))
-                df_imp = df.reset_index(drop = True)
-                index = [i.tolist() for i in np.where( (df_imp['null_count']  >= 9) & (df_imp['year'] <= 2010))][0]
-                df_imp = df_imp.iloc[~df_imp.index.isin(index)]
-                df_imp = df_imp.fillna(df_imp.median())
-                df_imp = df_imp.drop(columns = ['year','null_count','FullDate'])
-                #df_imp = df_imp.astype(int)
-            return df_imp
+
+
+class drop_year():
+    def __call__(self, df):
+        df['FullDate'] = df['FullDate'].astype('string')
+        df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
+        index = df[df['year'] < 2010].index.tolist()
+        df = df.iloc[~df.index.isin(index)]
+        df = df.drop(columns = ['year', 'FullDate'])
+        return df
+
+class iterative_imputation():
+    def __call__(self,df,seed):
+        imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
+        df_imp = imputer.fit_transform(df)
+        df_imp = df_imp.astype(int)
+        df_imp = pd.DataFrame(data = df_imp,columns = df.columns)
+        return df_imp
 
 class target_encoding():
     def __init__(self, loo: bool) :
@@ -52,83 +54,56 @@ class target_encoding():
         df_target['LOC'] = loc
         return df_target
 
-'''class choose_dict():
-    def __init__(self, weight_average, seer):
-        self.weight_average = weight_average
-        self.seer = seer
-
-    def __call__(self):
-        if self.seer == 1:
-            if self.weight_average == 'average':
-                with open('./encode_dict_folder/encode_average_seer.pickle', 'rb') as f:
-                    return pickle.load(f)
-            
-            elif self.weight_average == 'weight':
-                with open('./encode_dict_folder/encode_weight.pickle_seer', 'rb') as f:
-                    return pickle.load(f)
-        elif self.seer == 0:
-            if self.weight_average == 'average':
-                with open('./encode_dict_folder/encode_average.pickle', 'rb') as f:
-                    return pickle.load(f)
-            
-            elif self.weight_average == 'weight':
-                with open('./encode_dict_folder/encode_weight.pickle', 'rb') as f:
-                    return pickle.load(f)'''
-
-'''class mapping():
-    def __call__(self, dict, df) :
-        for i in df.columns[2:]:
-            df[i] = df[i].apply(lambda x:dict[i][x])
-        return df'''
-
-class split_data():
-    def __init__(self, testsize, seed):
-        self.testsize = testsize
-        self.seed = seed
-        self.df_train = pd.DataFrame()
-        self.testset_dict = {}
-    
-    def __call__(self, dfenc):
-        for i in sorted(dfenc['LOC'].unique()):
-            tempdf = dfenc.loc[dfenc['LOC'] == i]
-            tempdf = tempdf.drop(columns=['LOC'])
-
-            trainset,testset = train_test_split(tempdf,test_size = self.testsize,stratify=tempdf['Class'],random_state=self.seed)
-            self.df_train = pd.concat([self.df_train, trainset])
-            self.df_train = shuffle(self.df_train)
-            self.testset_dict[i] = testset
-            
-        x_train = self.df_train.drop(columns=['Class'])
-        y_train = self.df_train['Class']
-        return x_train, y_train, self.testset_dict
-
-
 class sample_method():
-    def __init__(self,sampler,strategy,seed):
-        self.sampler = sampler
+    def __init__(self,method,strategy,seed):
+        self.method = method
         self.seed = seed
         self.strategy = strategy
 
-    '''class foo(random_state, sampling_strategy, method="smotetomek"):
-        method = ''
-        def __init__():
-        
-        def execute():
-            getattr(self, SMOTEENN)(seed, strategy)'''
-
     def __call__(self,x_train,y_train):
-        #foo = foo(self.sedd, self.strategy, "smotetomek")
-        #foo.execute()
+        sampler = self.sampler(self.seed, self.strategy, self.method)
+        sample = sampler.execute()
+        x_train_sample, y_train_sample = sample.fit_resample(x_train, y_train)
         
-        if self.sampler == 'smotetomek':
-            sample_method = SMOTETomek(random_state=self.seed, sampling_strategy = self.strategy)
-        if self.sampler == 'smoteenn':
-            sample_method = SMOTEENN(random_state=self.seed, sampling_strategy = self.strategy)
-        if self.sampler == 'undersample':
-            sample_method = RandomUnderSampler(random_state=self.seed, sampling_strategy = self.strategy)
-        if self.sampler == 'nearmiss':
-            sample_method = NearMiss(random_state=self.seed, sampling_strategy = self.strategy)
-        
-        x_train_smote,y_train_smote = sample_method.fit_resample(x_train, y_train)
-        return x_train_smote,y_train_smote
+        return x_train_sample, y_train_sample
 
+    class sampler():
+        def __init__(self, seed, sampling_strategy, method):
+            self.method = method
+            self.RandomUnderSampler = RandomUnderSampler(random_state=seed, sampling_strategy = sampling_strategy)
+            self.SMOTEENN = SMOTEENN(random_state=seed, sampling_strategy = sampling_strategy)  
+            self.NearMiss = NearMiss(sampling_strategy = sampling_strategy)
+            
+        def execute(self):
+            return getattr(self, self.method)
+
+class train_enc_map():
+    def __call__(self, dfenc, dfimp, columns,df):
+        trainenc_dict = {}
+        for col in columns:
+            trainenc_dict[col] = dict((int(key),0) for key in df[col].value_counts().index.tolist())
+            implist = dfimp[col].value_counts().index.tolist()
+            for i in implist:
+                id = dfimp.loc[dfimp[col] == i].index[0]
+                trainenc_dict[col][i] = dfenc.loc[id, col]           
+        return trainenc_dict
+
+class mapping():
+    def __call__(self, dict, df, columns) :
+        for i in columns:
+            df[i] = df[i].apply(lambda x:dict[i][x])
+        return df
+
+class preprocess():
+    def __init__(self, size, seed):
+        self.size = size
+        self.seed = seed
+    def __call__(self,df, site_list):
+        train = pd.DataFrame()
+        test = pd.DataFrame()
+        for i in site_list:
+            df_site = df[df['LOC'] == i]
+            trainset, testset = train_test_split(df_site,test_size = self.size,stratify=df_site['Class'],random_state=self.seed)
+            train = pd.concat([train, trainset])
+            test = pd.concat([test, testset])
+        return train, test

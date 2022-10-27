@@ -20,7 +20,6 @@ import utils
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
 parser.add_argument("--hospital", type=int, choices=range(0, 1000), required=True)
-parser.add_argument("--encode_dict", type=str, required=True)
 parser.add_argument("--seer", type=int, required=True)
 args = parser.parse_args()
 
@@ -28,60 +27,54 @@ size = 0.2
 seed = args.seed
 seer = args.seer
 hospital = args.hospital
-average_weight = args.encode_dict
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/tl_folder_test1/'
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
 
-imputation = utils.imputation()
-enc_dict = utils.choose_dict(average_weight,seer)
-mapping = utils.mapping()
-split = utils.split_data(size,seed)
-
 if seer == 1:
-  columns = ["Class","LOC", "Gender", "Age", "AJCCstage", "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2"]
-  df = pd.read_csv(r'/home/refu0917/lungcancer/data/seerdb.csv',index_col = [0])
-  df = df[columns]
-  df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
-  df = df[df['LOC'] == hospital]
-  dfmap = mapping(enc_dict(),df)
-  output_file_name = 'transfer_learning_score_seer'
+  columns = ["Class","LOC", "FullDate", "Gender", "Age", "AJCCstage", 
+             "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2", "SSF4", "OP"]
+  output_file_name = 'transfer_learning_score_seer.csv'
 
 elif seer == 0:
   columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
-  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
-  df = df[columns]
-  df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
-  df = df[df['LOC'] == hospital]
-  dfimp = imputation(df, 'drop_and_fill')
-  dfmap = mapping(enc_dict(),dfimp)
-  output_file_name = 'transfer_learning_score'
+  output_file_name = 'transfer_learning_score.csv'
 
+with open('imputationdf.pickle', 'rb') as f:
+    site_imp_dict = pickle.load(f)
+with open('mapping.pickle', 'rb') as f:
+    site_map_dict = pickle.load(f)
 
 def main() -> None:
+
+    map = utils.mapping()
+    split_train_test = utils.split_data()
+
+    # Select the hospital from the dataframe after imputation
+    dfimp = site_imp_dict[hospital]
+    trainimp, testimp = dfimp['train'],dfimp['test']
     
-    lr_rate = 0.001
-    record = []
-    set_thres=0.19
-    METRICS = [
-            metrics.Precision(thresholds=set_thres),
-            metrics.Recall(thresholds=set_thres),
-            metrics.AUC()
-    ]
+    # Map the target encoding
+    trainenc = map(site_map_dict, trainimp, columns[3:])
+    testenc = map(site_map_dict, testimp, columns[3:])
+    trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
+    testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
     
-    # Load local data partition
-    x_train, x_test, y_train, y_test = split(dfmap)
+    # Split X and Y
+    x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
+    x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
 
     # Load and compile Keras model
     model = keras.models.load_model('pretrained_model')
-    hist = model.fit(x_train,y_train,batch_size=16,epochs=100,verbose=2,validation_data=(x_test, y_test))
+    model.fit(x_train,y_train,batch_size=16,epochs=100,verbose=2,validation_data=(x_test, y_test))
     y_pred = model.predict(x_test)
-    score_df = pd.read_csv(f'{output_file_name}_{average_weight}.csv',index_col=[0])
+    score_df = pd.read_csv(dir_name + output_file_name,index_col=[0])
     score_df.loc[seed,f"site{hospital}"] = roc_auc_score(y_test, y_pred)
-    score_df.to_csv(f'{output_file_name}_{average_weight}.csv')
+    score_df.to_csv(dir_name + output_file_name)
 
 if __name__ == "__main__":
     main()
