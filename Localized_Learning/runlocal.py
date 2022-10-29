@@ -45,7 +45,7 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/'
 map = utils.mapping()
 drop_year = utils.drop_year()
 iterative_imputation = utils.iterative_imputation()
@@ -53,6 +53,7 @@ target_encode = utils.target_encoding(False)
 train_enc_map_fn = utils.train_enc_map()
 
 if seer == 1:
+    output_file_name = 'local_val_df_seer.csv'
     columns = ["Class","LOC", "FullDate", "Gender", "Age", "AJCCstage", 
                 "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2", "SSF4", "OP"]
     df1 = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
@@ -62,6 +63,7 @@ if seer == 1:
     df = pd.concat([df1, df2])
 
 elif seer == 0:
+    output_file_name = 'local_val_df.csv'
     columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
@@ -78,8 +80,12 @@ df = drop_year(df)
 trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
 # Impute the trainset and testset respectively
 trainimp = iterative_imputation(trainset, seed)
-testimp = iterative_imputation(testset, seed)
-
+dftemp = pd.concat([trainimp, testset])
+dftempimp = iterative_imputation(dftemp,seed)
+trainimp = dftempimp[:len(trainimp)]
+testimp = dftempimp[len(trainimp):]
+print(testset.Class.value_counts())
+print(testimp.Class.value_counts())
 # Encode trainset and map the encode dictionary to testset
 trainenc = target_encode(trainimp)
 train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
@@ -88,7 +94,7 @@ testenc = map(train_enc_dict, testimp, columns[3:])
 trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
 testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
 
-print(trainenc.Class.value_counts())
+
 # Split X and Y
 x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
 x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
@@ -105,7 +111,7 @@ model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2
 hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
 y_pred = model.predict(x_test)
 auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv('/home/refu0917/lungcancer/remote_output1/output_folder/local_folder_test1/local_val_df.csv', index_col=[0])
+val_df = pd.read_csv('/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/local_val_df.csv', index_col=[0])
 val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv('/home/refu0917/lungcancer/remote_output1/output_folder/local_folder_test1/local_val_df.csv')
+val_df.to_csv('/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/local_val_df.csv')
 print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')

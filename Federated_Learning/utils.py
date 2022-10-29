@@ -108,7 +108,11 @@ class make_map():
             temp = drop_year_fn(df_list[i])
             trainset, testset = train_test_split(temp,test_size = self.size,stratify=temp['Class'],random_state=self.seed)
             trainimp = iterative_imputation_fn(trainset, self.seed)
-            testimp = iterative_imputation_fn(testset, self.seed)
+            dftemp = pd.concat([trainimp, testset])
+            dftempimp = iterative_imputation_fn(dftemp, self.seed)
+            trainimp = dftempimp[:len(trainimp)]
+            testimp = dftempimp[len(trainimp):]
+            # testimp = iterative_imputation_fn(testset, self.seed)
             # Make train and test imputation dictionary
             imp_dict[site_id] = {"train":trainimp, "test":testimp}
 
@@ -180,10 +184,10 @@ class CifarClient(fl.client.NumPyClient):
         self.size = size
         if seer == 1:
             self.hospital_list = [2,3,6,8,9]
-            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fl_folder_test1/df_fedavg_average_seer'
+            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/df_fedavg_average_seer'
         elif seer == 0:
             self.hospital_list = [2,3,6,8]
-            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fl_folder_test1/df_fedavg_average'
+            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/df_fedavg_average'
             
     def get_parameters(self):
         """Get parameters of the local model."""

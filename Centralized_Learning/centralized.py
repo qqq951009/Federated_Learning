@@ -35,7 +35,7 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/cl_folder_test1/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/'
 map = utils.mapping()
 drop_year = utils.drop_year()
 preprocess_df = utils.preprocess(size, seed)
@@ -68,11 +68,18 @@ elif seer == 0:
 # Drop the year smaller than 2010
 df = drop_year(df)
 trainset, testset = preprocess_df(df, site_list)
-#trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
+
+trainimp = iterative_imputation(trainset, seed)
+dftemp = pd.concat([trainimp, testset])
+dftempimp = iterative_imputation(dftemp,seed)
+trainimp = dftempimp[:len(trainimp)]
+testimp = dftempimp[len(trainimp):]
+print(testset.Class.value_counts())
+print(testimp.Class.value_counts())
 
 # Impute the trainset and testset respectively
-trainimp = iterative_imputation(trainset,seed)
-testimp = iterative_imputation(testset,seed)
+#trainimp = iterative_imputation(trainset,seed)
+#testimp = iterative_imputation(testset,seed)
 
 # Encode trainset and map the encode dictionary to testset
 trainenc = target_encode(trainimp)

@@ -27,7 +27,7 @@ size = 0.2
 seed = args.seed
 seer = args.seer
 hospital = args.hospital
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/tl_folder_test1/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/'
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
@@ -52,7 +52,6 @@ with open('mapping.pickle', 'rb') as f:
 def main() -> None:
 
     map = utils.mapping()
-    split_train_test = utils.split_data()
 
     # Select the hospital from the dataframe after imputation
     dfimp = site_imp_dict[hospital]

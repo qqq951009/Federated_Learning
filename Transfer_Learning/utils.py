@@ -107,15 +107,17 @@ class make_map():
             temp = drop_year_fn(df_list[i])
             trainset, testset = train_test_split(temp,test_size = self.size,stratify=temp['Class'],random_state=self.seed)
             trainimp = iterative_imputation_fn(trainset, self.seed)
-            testimp = iterative_imputation_fn(testset, self.seed)
+            dftemp = pd.concat([trainimp, testset])
+            dftempimp = iterative_imputation_fn(dftemp, self.seed)
+            trainimp = dftempimp[:len(trainimp)]
+            testimp = dftempimp[len(trainimp):]
+            # testimp = iterative_imputation_fn(testset, self.seed)
             # Make train and test imputation dictionary
             imp_dict[site_id] = {"train":trainimp, "test":testimp}
 
             # Traget encode trainset and make trainset encode dictionary
             trainenc = target_encode_fn(trainimp)
             df_list[i] = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
-        print(df_list[0])
-        print(df_list[1])
 
         for k in df_list[0].keys():
             temp_list = []

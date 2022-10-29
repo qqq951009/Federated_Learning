@@ -1,7 +1,7 @@
 import utils
 import pandas as pd
 from sklearn.model_selection import train_test_split
-
+import numpy as np
 seer = 0
 size=0.2
 seed=42
@@ -32,17 +32,18 @@ elif seer == 0:
 df['Class'] = df['Class'].apply(lambda x:2 if x != 0 else 1)
 df = df[df['LOC'] == site_id]
 
+imputation_fn = utils.imputation()
 # Drop the year smaller than 2010
 df = drop_year(df)
-# Split df into train and test set
+trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
+trainimp, testimp = imputation_fn(trainset, testset, 'drop_and_fill')
+
+
+'''# Split df into train and test set
 trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
 # Impute the trainset and testset respectively
 trainimp = iterative_imputation(trainset, seed)
-testimp = iterative_imputation(testset, seed)
-print(trainimp[trainimp['Class'] == 1]['Gender'].value_counts())
-print(trainimp[trainimp['Class'] == 2]['Gender'].value_counts())
-# Encode trainset and map the encode dictionary to testset
-trainenc = target_encode(trainimp)
-train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
-print(train_enc_dict)
-testenc = map(train_enc_dict, testimp, columns[3:])
+dftemp = pd.concat([trainimp, testset])
+dftempimp = iterative_imputation(dftemp,seed)
+trainimp = dftempimp[:len(trainimp)]
+testimp = dftempimp[len(trainimp):]'''

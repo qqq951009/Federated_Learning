@@ -3,7 +3,7 @@
 #declare -i j=43
 seer=0
 END=102
-for ((j=45;j<=END;j++)); do
+for ((j=42;j<=END;j++)); do
     echo "Start Local Training"
     #for site in ${site_list[@]}; do
     #    python3 runlocal.py --hospital=site --seed=${j} --seer=0

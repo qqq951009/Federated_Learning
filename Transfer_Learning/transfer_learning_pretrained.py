@@ -25,7 +25,7 @@ args = parser.parse_args()
 size = 0.2
 seed = args.seed
 seer = args.seer
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/tl_folder_test1/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/'
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
@@ -77,7 +77,6 @@ def main() -> None:
     # utils.pretrain_site 找出最資料量最大的醫院當作pretrain model
     ptr_site = utils.pretrain_site()
     map = utils.mapping()
-    split_train_test = utils.split_data() 
 
     # Choose the biggest site among all sites
     ptr_siteID = ptr_site(df_list, index_list)
