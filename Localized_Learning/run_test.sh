@@ -2,7 +2,7 @@
 # site_list = (2 3 6 8)
 #declare -i j=43
 seer=0
-END=43
+END=45
 for ((j=42;j<=END;j++)); do
     echo "Start Local Training"
     #for site in ${site_list[@]}; do
@@ -10,20 +10,20 @@ for ((j=42;j<=END;j++)); do
     #    sleep 1
 
     echo "Start client 2" 
-    python3 runlocal.py --hospital=2 --seed=${j} --seer=${seer}
+    python3 test.py --hospital=2 --seed=${j} --seer=${seer}
 
     sleep 5
     echo "Start client 3"
 
-    python3 runlocal.py --hospital=3 --seed=${j} --seer=${seer}
+    python3 test.py --hospital=3 --seed=${j} --seer=${seer}
 
     sleep 5
     echo "Start client 6"
-    python3 runlocal.py --hospital=6 --seed=${j} --seer=${seer}
+    python3 test.py --hospital=6 --seed=${j} --seer=${seer}
 
     sleep 5
     echo "Start client 8"
-    python3 runlocal.py --hospital=8 --seed=${j} --seer=${seer}
+    python3 test.py --hospital=8 --seed=${j} --seer=${seer}
     
 
     #sleep 5

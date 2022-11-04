@@ -35,10 +35,11 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/drop_and_fill_folder/'
 map = utils.mapping()
 drop_year = utils.drop_year()
 preprocess_df = utils.preprocess(size, seed)
+imputation_fn = utils.imputation()
 iterative_imputation = utils.iterative_imputation()
 target_encode = utils.target_encoding(False)
 train_enc_map_fn = utils.train_enc_map()
@@ -69,17 +70,8 @@ elif seer == 0:
 df = drop_year(df)
 trainset, testset = preprocess_df(df, site_list)
 
-trainimp = iterative_imputation(trainset, seed)
-dftemp = pd.concat([trainimp, testset])
-dftempimp = iterative_imputation(dftemp,seed)
-trainimp = dftempimp[:len(trainimp)]
-testimp = dftempimp[len(trainimp):]
-print(testset.Class.value_counts())
-print(testimp.Class.value_counts())
-
 # Impute the trainset and testset respectively
-#trainimp = iterative_imputation(trainset,seed)
-#testimp = iterative_imputation(testset,seed)
+trainimp, testimp = imputation_fn(trainset, testset, 'drop_and_fill')
 
 # Encode trainset and map the encode dictionary to testset
 trainenc = target_encode(trainimp)
@@ -90,7 +82,6 @@ trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
 testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
 
 x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
-#x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
 
 def main() -> None:
     

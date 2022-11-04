@@ -25,7 +25,7 @@ args = parser.parse_args()
 size = 0.2
 seed = args.seed
 seer = args.seer
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/drop_and_fill_folder/'
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)

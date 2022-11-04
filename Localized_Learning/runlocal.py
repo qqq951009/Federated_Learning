@@ -45,9 +45,10 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/drop_and_fill_folder/'
 map = utils.mapping()
 drop_year = utils.drop_year()
+imputation_fn = utils.imputation()
 iterative_imputation = utils.iterative_imputation()
 target_encode = utils.target_encoding(False)
 train_enc_map_fn = utils.train_enc_map()
@@ -74,18 +75,13 @@ elif seer == 0:
 df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
 df = df[df['LOC'] == site_id]
 
-# Drop the year smaller than 2010
+
 df = drop_year(df)
 # Split df into train and test set
 trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
 # Impute the trainset and testset respectively
-trainimp = iterative_imputation(trainset, seed)
-dftemp = pd.concat([trainimp, testset])
-dftempimp = iterative_imputation(dftemp,seed)
-trainimp = dftempimp[:len(trainimp)]
-testimp = dftempimp[len(trainimp):]
-print(testset.Class.value_counts())
-print(testimp.Class.value_counts())
+trainimp, testimp = imputation_fn(trainset, testset, 'drop_and_fill')
+
 # Encode trainset and map the encode dictionary to testset
 trainenc = target_encode(trainimp)
 train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
@@ -111,7 +107,7 @@ model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2
 hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
 y_pred = model.predict(x_test)
 auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv('/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/local_val_df.csv', index_col=[0])
-val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv('/home/refu0917/lungcancer/remote_output1/output_folder/imputation_test_folder/local_val_df.csv')
+#val_df = pd.read_csv(dir_name+output_file_name, index_col=[0])
+#val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
+#val_df.to_csv(dir_name+output_file_name)
 print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')

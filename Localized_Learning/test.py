@@ -87,9 +87,37 @@ print(len(df1), len(df2))
 # Split df into train and test set
 trainset1, testset1 = train_test_split(df1,test_size = size,stratify=df1['Class'],random_state=seed)
 trainset2, testset2 = train_test_split(df2,test_size = size,stratify=df2['Class'],random_state=seed)
-print(len(trainset1), len(testset1))
-print(len(trainset2), len(testset2))
-trainimp1, testimp1 = imputation_fn1(trainset1, testset1, 'drop_and_fill')
-trainimp2, testimp2 = imputation_fn2(trainset2, testset2, 'drop_and_fill')
-print(len(trainimp1), len(testimp1))
-print(len(trainimp2), len(testimp2))
+
+# Impute the trainset and testset respectively
+trainimp, testimp = imputation_fn1(trainset1, testset1, 'drop_and_fill')
+trainimp1, testimp1 = imputation_fn2(trainset2, testset2, 'drop_and_fill')
+
+
+trainenc = target_encode(trainimp)
+train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
+testenc = map(train_enc_dict, testimp, columns[3:])
+
+trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
+testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
+
+
+# Split X and Y
+x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
+x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
+
+opt_adam = Adam(learning_rate=lr_rate)
+model = Sequential() 
+model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
+model.add(Dense(16, activation='relu'))
+model.add(Dense(10, activation='relu'))    
+model.add(Dense(1, activation='sigmoid'))
+model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
+
+
+hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
+y_pred = model.predict(x_test)
+auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
+val_df = pd.read_csv(dir_name+output_file_name, index_col=[0])
+val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
+val_df.to_csv(dir_name+output_file_name)
+print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')

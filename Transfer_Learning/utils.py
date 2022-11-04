@@ -15,24 +15,26 @@ from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
 class imputation():
-    def __call__(self, df, imp_method):
-        if 'FullDate' not in df.columns:
-            return df
-        else:
-            if imp_method == 'fill9':
-                df_imp = df.fillna(9)
-            if imp_method == 'drop':
-                df_imp = df.dropna()
-            if imp_method == 'drop_and_fill':
-                df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
-                df['null_count'] = list(df.isna().sum(axis=1))
-                df_imp = df.reset_index(drop = True)
-                index = [i.tolist() for i in np.where( (df_imp['null_count']  >= 9) & (df_imp['year'] <= 2010))][0]
-                df_imp = df_imp.iloc[~df_imp.index.isin(index)]
-                df_imp = df_imp.fillna(df_imp.median())
-                df_imp = df_imp.drop(columns = ['year','null_count','FullDate'])
-                df_imp = df_imp.astype(int)
-            return df_imp
+    def __call__(self, df_train, df_test, imp_method):
+        #if 'FullDate' not in df_train.columns:
+        #    return df_train, df_test
+        
+        if imp_method == 'fill10':
+            train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
+        if imp_method == 'drop_and_fill':
+            
+            df_train['null_count'], df_test['null_count'] = list(df_train.isna().sum(axis=1)), list(df_test.isna().sum(axis=1))
+            train_index = df_train[df_train['null_count'] >= 9].index.tolist()
+            test_index = df_test[df_test['null_count'] >= 9].index.tolist()
+            df_train = df_train.iloc[~df_train.index.isin(train_index)]
+            df_test = df_test.iloc[~df_test.index.isin(test_index)]
+            
+            train_imp = df_train.fillna(df_train.median())
+            test_imp = df_test.fillna(df_train.median())
+
+            train_imp, test_imp = train_imp.drop(columns = ['null_count']), test_imp.drop(columns = ['null_count'])
+            train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
+        return train_imp, test_imp
 
 class drop_year():
     def __call__(self, df):
@@ -100,18 +102,15 @@ class make_map():
 
         drop_year_fn = drop_year()
         target_encode_fn = target_encoding(False)
-        iterative_imputation_fn = iterative_imputation()
+        imputation_fn = imputation()
+        # iterative_imputation_fn = iterative_imputation()
         train_enc_map_fn = train_enc_map()
         
         for i, site_id in zip(range(len(df_list)), index_list):                     
             temp = drop_year_fn(df_list[i])
             trainset, testset = train_test_split(temp,test_size = self.size,stratify=temp['Class'],random_state=self.seed)
-            trainimp = iterative_imputation_fn(trainset, self.seed)
-            dftemp = pd.concat([trainimp, testset])
-            dftempimp = iterative_imputation_fn(dftemp, self.seed)
-            trainimp = dftempimp[:len(trainimp)]
-            testimp = dftempimp[len(trainimp):]
-            # testimp = iterative_imputation_fn(testset, self.seed)
+            trainimp, testimp = imputation_fn(trainset, testset, 'drop_and_fill')
+            
             # Make train and test imputation dictionary
             imp_dict[site_id] = {"train":trainimp, "test":testimp}
 

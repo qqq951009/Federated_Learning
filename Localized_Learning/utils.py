@@ -14,7 +14,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
-
+# Drop the year before 2010
 class drop_year():
     def __call__(self, df):
         df['FullDate'] = df['FullDate'].astype('string')
@@ -24,7 +24,20 @@ class drop_year():
         df = df.drop(columns = ['year', 'FullDate'])
         return df
 
-class imputation():
+# Drop the year before 2010 the paitent data is more than 9 null value
+class drop_year_null():
+    def __call__(self, df):
+        df['FullDate'] = df['FullDate'].astype('string')
+        df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
+        df['null_count'] = list(df.isna().sum(axis=1))
+        year_index = df[df['year'] < 2010].index.tolist()
+        null_index = df[df['null_count'] >= 9].index.tolist()
+        df = df.iloc[~df.index.isin(year_index)]
+        df = df.iloc[~df.index.isin(null_index)]
+        df = df.drop(columns = ['year', 'FullDate', 'null_count'])
+        return df
+
+'''class imputation():
     def __call__(self, df_train, df_test, imp_method):
         #if 'FullDate' not in df_train.columns:
         #    return df_train, df_test
@@ -36,14 +49,53 @@ class imputation():
             df_train['null_count'], df_test['null_count'] = list(df_train.isna().sum(axis=1)), list(df_test.isna().sum(axis=1))
             train_index = df_train[df_train['null_count'] >= 9].index.tolist()
             test_index = df_test[df_test['null_count'] >= 9].index.tolist()
+            print(len(train_index), len(test_index))
             df_train = df_train.iloc[~df_train.index.isin(train_index)]
             df_test = df_test.iloc[~df_test.index.isin(test_index)]
             
+            temp = pd.concat([df_train, df_test])
+            print(temp.isna().sum(axis=1).value_counts())
+            
             train_imp = df_train.fillna(df_train.median())
-            test_imp = df_test.fillna(df_test.median())
+            test_imp = df_test.fillna(df_train.median())
 
             train_imp, test_imp = train_imp.drop(columns = ['null_count']), test_imp.drop(columns = ['null_count'])
             train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
+        return train_imp, test_imp'''
+
+# Drop the paitent data has more than 9 null value 
+# And fill median to the remaining null value
+'''class imputation():
+    def __call__(self, df_train, df_test, imp_method):      
+        if imp_method == '10':
+            train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
+
+        if imp_method == 'median':     
+            train_imp = df_train.fillna(df_train.median())
+            test_imp = df_test.fillna(df_train.median())
+
+        #train_imp, test_imp = train_imp.drop(columns = ['null_count']), test_imp.drop(columns = ['null_count'])
+        train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
+        return train_imp, test_imp'''
+
+class imputation():
+    def __call__(self, df_train, df_test, imp_method):
+        #if 'FullDate' not in df_train.columns:
+        #    return df_train, df_test
+        df_train['null_count'], df_test['null_count'] = list(df_train.isna().sum(axis=1)), list(df_test.isna().sum(axis=1))
+        train_index = df_train[df_train['null_count'] >= 9].index.tolist()
+        test_index = df_test[df_test['null_count'] >= 9].index.tolist()
+        df_train = df_train.iloc[~df_train.index.isin(train_index)]
+        df_test = df_test.iloc[~df_test.index.isin(test_index)]
+        if imp_method == 'fill10':
+            train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
+
+        if imp_method == 'drop_and_fill':     
+            train_imp = df_train.fillna(df_train.median())
+            test_imp = df_test.fillna(df_train.median())
+
+        train_imp, test_imp = train_imp.drop(columns = ['null_count']), test_imp.drop(columns = ['null_count'])
+        train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
         return train_imp, test_imp
 
 class iterative_imputation():
@@ -99,4 +151,3 @@ class split_data():
         x_test, y_test = testset.drop(columns = ['Class', 'LOC']), testset['Class']
         
         return x_train, x_test, y_train, y_test
-
