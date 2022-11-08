@@ -92,7 +92,7 @@ def main() -> None:
 
     # Start Flower client
     client = utils.CifarClient(model, x_train, y_train, x_test, y_test, site_id, size, seed, seer)
-    fl.client.start_numpy_client("[::]:5555", client=client)
+    fl.client.start_numpy_client("[::]:8080", client=client)
 
 if __name__ == "__main__":
     main()

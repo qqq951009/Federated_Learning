@@ -35,13 +35,13 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/drop_and_fill_folder/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/'
 map = utils.mapping()
-drop_year = utils.drop_year()
+drop = utils.drop_year_and_null()
 preprocess_df = utils.preprocess(size, seed)
 imputation_fn = utils.imputation()
 iterative_imputation = utils.iterative_imputation()
-target_encode = utils.target_encoding(False)
+target_encode = utils.target_encoding()
 train_enc_map_fn = utils.train_enc_map()
 
 if seer == 1:
@@ -67,21 +67,22 @@ elif seer == 0:
   site_list = [2,3,6,8]
 
 # Drop the year smaller than 2010
-df = drop_year(df)
+df = drop(df)
 trainset, testset = preprocess_df(df, site_list)
 
 # Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn(trainset, testset, 'drop_and_fill')
-
+trainimp, testimp = imputation_fn(trainset, testset, '10')
 # Encode trainset and map the encode dictionary to testset
-trainenc = target_encode(trainimp)
-train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
-testenc = map(train_enc_dict, testimp, columns[3:])
+x_train, y_train, testenc = target_encode(trainimp, testimp)
 
-trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
-testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
+# trainenc = target_encode(trainimp)
+# train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
+# testenc = map(train_enc_dict, testimp, columns[3:])
 
-x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
+# trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
+# testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
+
+# x_train, y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
 
 def main() -> None:
     
@@ -113,6 +114,7 @@ def main() -> None:
       y_test = df_test['Class']
       y_pred = model.predict(x_test)
       temp_auc_score.append(roc_auc_score(y_test, y_pred))
+    print(temp_auc_score)
     score_df.loc[seed] = temp_auc_score
     score_df.to_csv(dir_name+output_file_name)
 

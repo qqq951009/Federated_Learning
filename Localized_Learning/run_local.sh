@@ -2,7 +2,7 @@
 # site_list = (2 3 6 8)
 #declare -i j=43
 seer=0
-END=43
+END=102
 for ((j=42;j<=END;j++)); do
     echo "Start Local Training"
     #for site in ${site_list[@]}; do

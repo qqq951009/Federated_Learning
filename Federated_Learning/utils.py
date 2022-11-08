@@ -14,28 +14,6 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
-class imputation():
-    def __call__(self, df_train, df_test, imp_method):
-        #if 'FullDate' not in df_train.columns:
-        #    return df_train, df_test
-        
-        if imp_method == 'fill10':
-            train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
-        if imp_method == 'drop_and_fill':
-            
-            df_train['null_count'], df_test['null_count'] = list(df_train.isna().sum(axis=1)), list(df_test.isna().sum(axis=1))
-            train_index = df_train[df_train['null_count'] >= 9].index.tolist()
-            test_index = df_test[df_test['null_count'] >= 9].index.tolist()
-            df_train = df_train.iloc[~df_train.index.isin(train_index)]
-            df_test = df_test.iloc[~df_test.index.isin(test_index)]
-            
-            train_imp = df_train.fillna(df_train.median())
-            test_imp = df_test.fillna(df_train.median())
-
-            train_imp, test_imp = train_imp.drop(columns = ['null_count']), test_imp.drop(columns = ['null_count'])
-            train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
-        return train_imp, test_imp
-
 class drop_year():
     def __call__(self, df):
         df['FullDate'] = df['FullDate'].astype('string')
@@ -44,6 +22,31 @@ class drop_year():
         df = df.iloc[~df.index.isin(index)]
         df = df.drop(columns = ['year', 'FullDate'])
         return df
+
+# Drop the year before 2010 the paitent data is more than 9 null value
+class drop_year_and_null():
+    def __call__(self, df):
+        df['FullDate'] = df['FullDate'].astype('string')
+        df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
+        df['null_count'] = list(df.isna().sum(axis=1))
+        year_index = df[df['year'] < 2010].index.tolist()
+        null_index = df[df['null_count'] >= 9].index.tolist()
+        df = df.iloc[~df.index.isin(year_index)]
+        df = df.iloc[~df.index.isin(null_index)]
+        df = df.drop(columns = ['year', 'FullDate', 'null_count'])
+        return df
+
+class imputation():
+    def __call__(self, df_train, df_test, imp_method):
+        if imp_method == '10':
+            train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
+        if imp_method == 'median':
+            train_imp = df_train.fillna(df_train.median())
+            test_imp = df_test.fillna(df_train.median())
+
+        train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
+        return train_imp, test_imp
+
 
 class iterative_imputation():
     def __call__(self,df,seed):
@@ -78,6 +81,7 @@ class train_enc_map():
         trainenc_dict = {}
         for col in columns:
             trainenc_dict[col] = dict((int(key),0) for key in df[col].value_counts().index.tolist())
+            trainenc_dict[col][10] = 0
             implist = dfimp[col].value_counts().index.tolist()
             for i in implist:
                 id = dfimp.loc[dfimp[col] == i].index[0]
@@ -100,16 +104,16 @@ class make_map():
     def __call__(self, df_list, index_list, df, columns):
         map, enc_dict, imp_dict = {}, {}, {}
 
-        drop_year_fn = drop_year()
+        drop_fn = drop_year_and_null()
         target_encode_fn = target_encoding(False)
         imputation_fn = imputation()
         # iterative_imputation_fn = iterative_imputation()
         train_enc_map_fn = train_enc_map()
         
         for i, site_id in zip(range(len(df_list)), index_list):                     
-            temp = drop_year_fn(df_list[i])
+            temp = drop_fn(df_list[i])
             trainset, testset = train_test_split(temp,test_size = self.size,stratify=temp['Class'],random_state=self.seed)
-            trainimp, testimp = imputation_fn(trainset, testset, 'drop_and_fill')
+            trainimp, testimp = imputation_fn(trainset, testset, '10')
             
             # Make train and test imputation dictionary
             imp_dict[site_id] = {"train":trainimp, "test":testimp}
@@ -182,10 +186,10 @@ class CifarClient(fl.client.NumPyClient):
         self.size = size
         if seer == 1:
             self.hospital_list = [2,3,6,8,9]
-            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/drop_and_fill_folder/df_fedavg_average_seer'
+            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/df_fedavg_average_seer'
         elif seer == 0:
             self.hospital_list = [2,3,6,8]
-            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/drop_and_fill_folder/df_fedavg_average'
+            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/df_fedavg_average'
             
     def get_parameters(self):
         """Get parameters of the local model."""

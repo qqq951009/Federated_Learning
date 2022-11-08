@@ -9,6 +9,7 @@ from keras import metrics
 import matplotlib.pyplot as plt
 import scikitplot as skplt
 from sklearn.utils import shuffle
+from category_encoders import TargetEncoder
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Embedding, Flatten, Dropout
 from sklearn.model_selection import train_test_split
@@ -45,12 +46,13 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/drop_and_fill_folder/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/'
 map = utils.mapping()
-drop_year = utils.drop_year()
-drop_year_null = utils.drop_year_null()
+drop = utils.drop_year_and_null()
+imputation_fn = utils.imputation()
 iterative_imputation = utils.iterative_imputation()
-target_encode = utils.target_encoding(False)
+tar_enc = utils.target_encoding()
+
 train_enc_map_fn = utils.train_enc_map()
 
 if seer == 1:
@@ -64,7 +66,7 @@ if seer == 1:
     df = pd.concat([df1, df2])
 
 elif seer == 0:
-    output_file_name = 'local_val_df_comp.csv'
+    output_file_name = 'local_val_df.csv'
     columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
@@ -75,49 +77,13 @@ elif seer == 0:
 df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
 df = df[df['LOC'] == site_id]
 
-imputation_fn1 = utils.imputation()
-imputation_fn2 = utils.imputation2()
 
-# Drop the year smaller than 2010
-df1 = drop_year_null(df)
-df2 = drop_year(df)
-print(df1.isna().sum(axis=1).value_counts())
-print(df2.isna().sum(axis=1).value_counts())
-print(len(df1), len(df2))
+df = drop(df)
 # Split df into train and test set
-trainset1, testset1 = train_test_split(df1,test_size = size,stratify=df1['Class'],random_state=seed)
-trainset2, testset2 = train_test_split(df2,test_size = size,stratify=df2['Class'],random_state=seed)
-
+trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
 # Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn1(trainset1, testset1, 'drop_and_fill')
-trainimp1, testimp1 = imputation_fn2(trainset2, testset2, 'drop_and_fill')
+trainimp, testimp = imputation_fn(trainset, testset, '10')
 
-
-trainenc = target_encode(trainimp)
-train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
-testenc = map(train_enc_dict, testimp, columns[3:])
-
-trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
-testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
-
-
-# Split X and Y
-x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
-x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
-
-opt_adam = Adam(learning_rate=lr_rate)
-model = Sequential() 
-model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
-model.add(Dense(16, activation='relu'))
-model.add(Dense(10, activation='relu'))    
-model.add(Dense(1, activation='sigmoid'))
-model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
-
-
-hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
-y_pred = model.predict(x_test)
-auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv(dir_name+output_file_name, index_col=[0])
-val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv(dir_name+output_file_name)
-print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')
+x_train, y_train, x_test, y_test = tar_enc(trainimp, testimp)
+print(y_train.value_counts())
+print(y_test.value_counts())
