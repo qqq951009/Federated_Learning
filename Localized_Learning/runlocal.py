@@ -7,7 +7,6 @@ import seaborn as sns
 import tensorflow as tf
 from keras import metrics
 import matplotlib.pyplot as plt
-import scikitplot as skplt
 from sklearn.utils import shuffle
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Embedding, Flatten, Dropout
@@ -45,7 +44,7 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_median_folder_check/'
 map = utils.mapping()
 drop = utils.drop_year_and_null()
 imputation_fn = utils.imputation()
@@ -80,7 +79,7 @@ df = drop(df)
 # Split df into train and test set
 trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
 # Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn(trainset, testset, '10')
+trainimp, testimp = imputation_fn(trainset, testset, 'median')
 
 # Encode trainset and map the encode dictionary to testset
 x_train, y_train, x_test, y_test = target_encode(trainimp, testimp)

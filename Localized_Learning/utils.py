@@ -32,10 +32,10 @@ class drop_year_and_null():
         df['null_count'] = list(df.isna().sum(axis=1))
         year_index = df[df['year'] < 2010].index.tolist()
         null_index = df[df['null_count'] >= 9].index.tolist()
-        df = df.iloc[~df.index.isin(year_index)]
-        df = df.iloc[~df.index.isin(null_index)]
-        df = df.drop(columns = ['year', 'FullDate', 'null_count'])
-        return df
+        df_dropyear = df.iloc[~df.index.isin(year_index)]
+        df_dropnull = df_dropyear.iloc[~df_dropyear.index.isin(null_index)]
+        df_dropnull = df_dropnull.drop(columns = ['year', 'FullDate', 'null_count'])
+        return df_dropnull
 
 # Fill median to the remaining null value
 class imputation():
