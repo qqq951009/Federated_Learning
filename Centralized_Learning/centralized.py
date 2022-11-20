@@ -35,12 +35,12 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_median_folder_check/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/'
 map = utils.mapping()
 drop = utils.drop_year_and_null()
 preprocess_df = utils.preprocess(size, seed)
 imputation_fn = utils.imputation()
-iterative_imputation = utils.iterative_imputation()
+# iterative_imputation = utils.iterative_imputation()
 target_encode = utils.target_encoding()
 train_enc_map_fn = utils.train_enc_map()
 
@@ -71,7 +71,7 @@ df = drop(df)
 trainset, testset = preprocess_df(df, site_list)
 
 # Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn(trainset, testset, 'median')
+trainimp, testimp = imputation_fn(trainset, testset, '10', seed)
 # Encode trainset and map the encode dictionary to testset
 x_train, y_train, testenc = target_encode(trainimp, testimp)
 

@@ -2,7 +2,7 @@
 
 #declare -i j=42
 seer=0
-END=43
+END=102
 for ((j=42;j<=END;j++)); do
 
     python3 make_encode_map.py --seed=${j} --seer=${seer}

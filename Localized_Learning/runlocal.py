@@ -30,7 +30,7 @@ size=0.2
 auc_val_result = {}
 hospital_list = [2,3,6,8]
 
-set_thres=0.19
+set_thres=0.1
 METRICS = [
       metrics.Precision(thresholds=set_thres),
       metrics.Recall(thresholds=set_thres),
@@ -44,11 +44,11 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_median_folder_check/'
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/'
 map = utils.mapping()
 drop = utils.drop_year_and_null()
 imputation_fn = utils.imputation()
-iterative_imputation = utils.iterative_imputation()
+
 target_encode = utils.target_encoding()
 train_enc_map_fn = utils.train_enc_map()
 
@@ -77,9 +77,10 @@ df = df[df['LOC'] == site_id]
 
 df = drop(df)
 # Split df into train and test set
-trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
+trainset, testset = train_test_split(df, test_size = size, stratify = df['Class'], random_state = seed)
+
 # Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn(trainset, testset, 'median')
+trainimp, testimp = imputation_fn(trainset, testset, '10', seed)
 
 # Encode trainset and map the encode dictionary to testset
 x_train, y_train, x_test, y_test = target_encode(trainimp, testimp)

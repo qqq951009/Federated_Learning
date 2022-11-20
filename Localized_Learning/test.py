@@ -16,6 +16,9 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 import utils
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--hospital", type=int, choices=range(0, 10), required=True)
@@ -50,8 +53,7 @@ dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folde
 map = utils.mapping()
 drop = utils.drop_year_and_null()
 imputation_fn = utils.imputation()
-iterative_imputation = utils.iterative_imputation()
-tar_enc = utils.target_encoding()
+target_encode = utils.target_encoding()
 
 train_enc_map_fn = utils.train_enc_map()
 
@@ -79,11 +81,6 @@ df = df[df['LOC'] == site_id]
 
 
 df = drop(df)
-# Split df into train and test set
-trainset, testset = train_test_split(df,test_size = size,stratify=df['Class'],random_state=seed)
-# Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn(trainset, testset, '10')
 
-x_train, y_train, x_test, y_test = tar_enc(trainimp, testimp)
-print(y_train.value_counts())
-print(y_test.value_counts())
+print(df.Class.value_counts())
+print(df[df.Class == 1])

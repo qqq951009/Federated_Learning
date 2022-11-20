@@ -14,14 +14,14 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
-class drop_year():
+'''class drop_year():
     def __call__(self, df):
         df['FullDate'] = df['FullDate'].astype('string')
         df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
         index = df[df['year'] < 2010].index.tolist()
         df = df.iloc[~df.index.isin(index)]
         df = df.drop(columns = ['year', 'FullDate'])
-        return df
+        return df'''
 
 # Drop the year before 2010 the paitent data is more than 9 null value
 class drop_year_and_null():
@@ -29,7 +29,7 @@ class drop_year_and_null():
         df['FullDate'] = df['FullDate'].astype('string')
         df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
         df['null_count'] = list(df.isna().sum(axis=1))
-        year_index = df[df['year'] < 2010].index.tolist()
+        year_index = df[df['year'] < 2011].index.tolist()
         null_index = df[df['null_count'] >= 9].index.tolist()
         df = df.iloc[~df.index.isin(year_index)]
         df = df.iloc[~df.index.isin(null_index)]
@@ -37,24 +37,30 @@ class drop_year_and_null():
         return df
 
 class imputation():
-    def __call__(self, df_train, df_test, imp_method):
+    def __call__(self, df_train, df_test, imp_method, seed):
         if imp_method == '10':
             train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
         if imp_method == 'median':
             train_imp = df_train.fillna(df_train.median())
             test_imp = df_test.fillna(df_train.median())
+        if imp_method == 'iterative':
+            imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
+            imputer = imputer.fit(df_train)
+            trainimp = imputer.transform(df_train)
+            testimp = imputer.transform(df_test)
+            train_imp, test_imp = pd.DataFrame(data=trainimp, columns=df_train.columns), pd.DataFrame(data=testimp, columns=df_test.columns)
 
         train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
         return train_imp, test_imp
 
 
-class iterative_imputation():
+'''class iterative_imputation():
     def __call__(self,df,seed):
         imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
         df_imp = imputer.fit_transform(df)
         df_imp = df_imp.astype(int)
         df_imp = pd.DataFrame(data = df_imp,columns = df.columns)
-        return df_imp
+        return df_imp'''
 
 class target_encoding():
     def __init__(self, loo: bool) :
@@ -113,7 +119,7 @@ class make_map():
         for i, site_id in zip(range(len(df_list)), index_list):                     
             temp = drop_fn(df_list[i])
             trainset, testset = train_test_split(temp,test_size = self.size,stratify=temp['Class'],random_state=self.seed)
-            trainimp, testimp = imputation_fn(trainset, testset, '10')
+            trainimp, testimp = imputation_fn(trainset, testset, '10', self.seed)
             
             # Make train and test imputation dictionary
             imp_dict[site_id] = {"train":trainimp, "test":testimp}

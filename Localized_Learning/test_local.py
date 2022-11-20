@@ -1,16 +1,13 @@
 import pandas as pd
 import numpy as np
 from category_encoders import TargetEncoder
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/horse-colic.csv'
+df = pd.read_csv(url, header=None, na_values='?')
+print(df.head())
 
-data = {'Temperature': ['Hot','Cold','Very Hot','Warm','Hot','Warm','Warm','Hot','Hot','Cold'],
-        'Color': ['Red','Yellow','Blue','Blue','Red','Yellow','Red','Yellow','Yellow','Yellow'],
-        'Class':[1,1,1,0,1,0,1,0,1,1]}
-df = pd.DataFrame(data, columns = ['Temperature', 'Color', 'Class'])
-
-
-x = df.drop(['Class'], axis=1)
-y = df['Class']
-
-encoder = TargetEncoder(cols=['Temperature', 'Color'])
-encoder.fit(x,y)
-encoder.transform(x, y)
+data = df.values
+ix = [i for i in range(data.shape[1]) if i != 23]
+print(ix)
+x, y = data[:, ix], data[:, 23]
+print(x)
+print(y)
