@@ -14,15 +14,6 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
-# Drop the year before 2010
-'''class drop_year():
-    def __call__(self, df):
-        df['FullDate'] = df['FullDate'].astype('string')
-        df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
-        index = df[df['year'] < 2010].index.tolist()
-        df = df.iloc[~df.index.isin(index)]
-        df = df.drop(columns = ['year', 'FullDate'])
-        return df'''
 
 # Use the data from 2011 and the data contain less than 9 null value counts
 class drop_year_and_null():
@@ -57,14 +48,6 @@ class imputation():
         train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
         return train_imp, test_imp
 
-'''class iterative_imputation():
-    def __call__(self,df,seed):
-        imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
-        df_imp = imputer.fit_transform(df)
-        df_imp = df_imp.astype(int)
-        df_imp = pd.DataFrame(data = df_imp,columns = df.columns)
-        return df_imp
-'''
 
 
 class target_encoding():
@@ -79,7 +62,7 @@ class target_encoding():
 
         return x_train_enc, y_train, x_test_enc, y_test
 
-class train_enc_map():
+'''class train_enc_map():
     def __call__(self, dfenc, dfimp, columns,df):
         trainenc_dict = {}
         for col in columns:
@@ -97,13 +80,5 @@ class mapping():
     def __call__(self, dict, df, columns) :
         for i in columns:
             df[i] = df[i].apply(lambda x:dict[i][x])
-        return df
+        return df'''
 
-class split_data():    
-    def __call__(self, df, size):
-        pivot = int(len(df)*(1-size))
-        trainset, testset = df[:pivot], df[pivot:]
-        x_train, y_train = trainset.drop(columns = ['Class', 'LOC']), trainset['Class']
-        x_test, y_test = testset.drop(columns = ['Class', 'LOC']), testset['Class']
-        
-        return x_train, x_test, y_train, y_test

@@ -1,0 +1,12 @@
+lr_rate : 0.001
+epoch : 100
+test_size : 0.2
+batch_size : 16
+set_thres : 0.1
+dir_name : '/home/refu0917/lungcancer/remote_output1/output_folder/iterative_impute_folder/'
+imp_method : '10'
+
+data_dir : 
+  orginal4 : '/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv'
+  external4 : '/home/refu0917/lungcancer/server/external4_process.csv'
+  seer : '/home/refu0917/lungcancer/data/seerdb.csv'

@@ -14,14 +14,6 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
-'''class drop_year():
-    def __call__(self, df):
-        df['FullDate'] = df['FullDate'].astype('string')
-        df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
-        index = df[df['year'] < 2010].index.tolist()
-        df = df.iloc[~df.index.isin(index)]
-        df = df.drop(columns = ['year', 'FullDate'])
-        return df'''
 
 # Drop the year before 2010 the paitent data is more than 9 null value
 class drop_year_and_null():
@@ -54,13 +46,6 @@ class imputation():
         return train_imp, test_imp
 
 
-'''class iterative_imputation():
-    def __call__(self,df,seed):
-        imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
-        df_imp = imputer.fit_transform(df)
-        df_imp = df_imp.astype(int)
-        df_imp = pd.DataFrame(data = df_imp,columns = df.columns)
-        return df_imp'''
 
 class target_encoding():
     def __init__(self, loo: bool) :
@@ -107,26 +92,26 @@ class make_map():
         self.size = size
         
 
-    def __call__(self, df_list, index_list, df, columns):
+    def __call__(self, df_list, index_list, df, columns, imp_method):
         map, enc_dict, imp_dict = {}, {}, {}
 
-        drop_fn = drop_year_and_null()
+        # drop_fn = drop_year_and_null()
         target_encode_fn = target_encoding(False)
         imputation_fn = imputation()
         # iterative_imputation_fn = iterative_imputation()
         train_enc_map_fn = train_enc_map()
         
         for i, site_id in zip(range(len(df_list)), index_list):                     
-            temp = drop_fn(df_list[i])
-            trainset, testset = train_test_split(temp,test_size = self.size,stratify=temp['Class'],random_state=self.seed)
-            trainimp, testimp = imputation_fn(trainset, testset, '10', self.seed)
+            # temp = drop_fn(df_list[i])
+            trainset, testset = train_test_split(df_list[i], test_size = self.size, stratify = df_list[i]['Class'], random_state=self.seed)
+            trainimp, testimp = imputation_fn(trainset, testset, imp_method, self.seed)
             
             # Make train and test imputation dictionary
             imp_dict[site_id] = {"train":trainimp, "test":testimp}
 
             # Traget encode trainset and make trainset encode dictionary
             trainenc = target_encode_fn(trainimp)
-            df_list[i] = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
+            df_list[i] = train_enc_map_fn(trainenc,trainimp, columns[2:],df)
         
         for k in df_list[0].keys():
             temp_list = []
@@ -139,7 +124,6 @@ class make_map():
             for key , value in zip(res.keys(), res.values()):
                 res[key] = value/len(df_list)
             map[k] = res
-        print(map)
         with open('./encode_dict_folder/mapping.pickle', 'wb') as f:
             pickle.dump(map, f)
         with open('./encode_dict_folder/imputationdf.pickle', 'wb') as f:
@@ -180,7 +164,7 @@ class sample_method():
 
 
 class CifarClient(fl.client.NumPyClient):
-    def __init__(self, model, x_train, y_train, x_test, y_test, cid, size, seed, seer):
+    def __init__(self, model, x_train, y_train, x_test, y_test, cid, size, seed, seer,dir_name):
         self.model = model
         self.x_train, self.y_train = x_train, y_train
         self.x_test, self.y_test = x_test, y_test
@@ -192,10 +176,10 @@ class CifarClient(fl.client.NumPyClient):
         self.size = size
         if seer == 1:
             self.hospital_list = [2,3,6,8,9]
-            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/df_fedavg_average_seer'
+            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/iterative_impute_folder/df_fedavg_average_seer'
         elif seer == 0:
             self.hospital_list = [2,3,6,8]
-            self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/df_fedavg_average'
+            self.output_file_name = dir_name+'df_fedavg_average'
             
     def get_parameters(self):
         """Get parameters of the local model."""
@@ -227,9 +211,9 @@ class CifarClient(fl.client.NumPyClient):
         print(config['rnd'])
         if config['rnd'] == 20:
             print("output length : ",len(self.record))
-            fl_auc_df = pd.read_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv') 
-            fl_auc_df[f'seed{self.seed}'] = self.record
-            fl_auc_df.to_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv',index=False)
+            # fl_auc_df = pd.read_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv') 
+            # fl_auc_df[f'seed{self.seed}'] = self.record
+            # fl_auc_df.to_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv',index=False)
             
         return parameters_prime, num_examples_train, results
 
@@ -251,10 +235,12 @@ class CifarClient(fl.client.NumPyClient):
             
             y_test_pred = self.model.predict(self.x_test)
             auroc = roc_auc_score(self.y_test,y_test_pred)
+            
             print("----------------evaluate---------------")
-            val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
-            val_df.loc[self.seed,'site'+str(self.cid)] =  auroc
-            val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')
+            print(self.cid, auroc)
+            # val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
+            # val_df.loc[self.seed,'site'+str(self.cid)] =  auroc
+            # val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')
 
         # Evaluate global model parameters on the local test data and return results
         loss,precision,recall,_ = self.model.evaluate(self.x_test, self.y_test)

@@ -65,10 +65,10 @@ if seer == 1:
 elif seer == 0:
     df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
     min_client = len(np.unique(df.LOC))
-    columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
+    columns = ["Class","LOC", "Gender", "Age", "CIG",
                 "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
                 "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
-                "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
+                "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]# "FullDate",
   
 
 with open('./encode_dict_folder/imputationdf.pickle', 'rb') as f:
@@ -87,8 +87,8 @@ def main() -> None:
     trainimp, testimp = dfimp['train'],dfimp['test']
 
     # Map the target encoding
-    trainenc = map(site_map_dict, trainimp, columns[3:])
-    testenc = map(site_map_dict, testimp, columns[3:])
+    trainenc = map(site_map_dict, trainimp, columns[2:])
+    testenc = map(site_map_dict, testimp, columns[2:])
     trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
     testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
 

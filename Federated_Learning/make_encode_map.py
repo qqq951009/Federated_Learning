@@ -1,4 +1,5 @@
 import os
+import yaml
 import time
 import pickle
 import random
@@ -7,6 +8,9 @@ import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
 import utils
+
+with open('../config.yaml', 'r') as f:
+    config = yaml.load(f, Loader=yaml.Loader)
 
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
@@ -28,13 +32,13 @@ if seer == 1:
 
 
 elif seer == 0:
-  columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
+  columns = ["Class","LOC", "Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
-  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
+            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] #"FullDate",
+  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv')
   df = df[columns]
-  df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+  # df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
 
 for i in np.unique(df.LOC):
     tempdf = df[df['LOC'] == i]
@@ -42,4 +46,4 @@ for i in np.unique(df.LOC):
     index_list.append(i)
 
 make_map_fn = utils.make_map(seed, size)
-make_map_fn(df_list, index_list, df, columns)
+make_map_fn(df_list, index_list, df, columns, config['imp_method'])

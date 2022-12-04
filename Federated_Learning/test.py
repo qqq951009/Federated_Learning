@@ -25,6 +25,9 @@ trainimp, testimp = dfimp['train'],dfimp['test']
 # Map the target encoding
 trainenc = map(site_map_dict, trainimp, columns[3:])
 testenc = map(site_map_dict, testimp, columns[3:])
-print(trainenc.Class.value_counts())
+print(trainenc.head())
+print(trainenc.DIFF.value_counts())
+print(trainenc.SSF3.value_counts())
+# print(trainenc.Class.value_counts())
 #trainenc['Class'] = trainenc['Class'].apply(lambda x:2 if x!=1 else 1)
 #testenc['Class'] = testenc['Class'].apply(lambda x:2 if x!=1 else 1)

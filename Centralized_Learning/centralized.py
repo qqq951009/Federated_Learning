@@ -1,4 +1,5 @@
-import os
+import os 
+import yaml
 import pickle
 import random
 import argparse
@@ -25,29 +26,34 @@ import utils
 # Parse command line argument `partition`
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
-parser.add_argument("--seer", type=int, required=True)
+parser.add_argument("--seer", type=int, default=0)
 args = parser.parse_args()
 
 #SEED
-size=0.2
+with open('../config.yaml', 'r') as f:
+      config = yaml.load(f, Loader=yaml.Loader)
+
+epoch = config['epoch']
+lr_rate = config['lr_rate']
+size = config['test_size']
+dir_name = config['dir_name']
+set_thres = config['set_thres']
+
 seed = args.seed
 seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/'
-map = utils.mapping()
+
 drop = utils.drop_year_and_null()
 preprocess_df = utils.preprocess(size, seed)
 imputation_fn = utils.imputation()
-# iterative_imputation = utils.iterative_imputation()
 target_encode = utils.target_encoding()
-train_enc_map_fn = utils.train_enc_map()
 
 if seer == 1:
   output_file_name = 'centralized_score_seer.csv'
-  columns = ["Class","LOC", "FullDate", "Gender", "Age", "AJCCstage", 
-             "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2", "SSF4", "OP"]
+  columns = ["Class","LOC", "Gender", "Age", "AJCCstage", 
+             "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2", "SSF4", "OP"] # "FullDate", 
   df1 = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
   df2 = pd.read_csv(r'/home/refu0917/lungcancer/data/seerdb.csv',index_col = [0])
   df1["Class"], df2["Class"] = df1['Class'].apply(lambda x:1 if x != 0 else 0), df2['Class'].apply(lambda x:1 if x != 0 else 0)
@@ -57,38 +63,27 @@ if seer == 1:
   
 elif seer == 0:
   output_file_name = 'centralized_score.csv'
-  columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
+  columns = ["Class","LOC", "Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
-  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
-  df["Class"] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
+  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv')
+  # df2 = pd.read_csv(r'')
+  # df["Class"] = df['Class'].apply(lambda x:1 if x != 0 else 0)
   df = df[columns]
   site_list = [2,3,6,8]
 
 # Drop the year smaller than 2010
-df = drop(df)
+#df = drop(df)
 trainset, testset = preprocess_df(df, site_list)
 
 # Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn(trainset, testset, '10', seed)
+trainimp, testimp = imputation_fn(trainset, testset, config['imp_method'], seed)
 # Encode trainset and map the encode dictionary to testset
 x_train, y_train, testenc = target_encode(trainimp, testimp)
 
-# trainenc = target_encode(trainimp)
-# train_enc_dict = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
-# testenc = map(train_enc_dict, testimp, columns[3:])
-
-# trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
-# testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
-
-# x_train, y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
-
 def main() -> None:
     
-    lr_rate = 0.001
-    epoch=100
-    set_thres=0.19
     METRICS = [
             metrics.Precision(thresholds=set_thres),
             metrics.Recall(thresholds=set_thres),

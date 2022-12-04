@@ -1,7 +1,7 @@
 #!/bin/bash
 declare -i seer=0
 END=102
-for ((seed=42;seed<=END;seed++)); do
+for ((seed=48;seed<=END;seed++)); do
     python3 make_encode_map.py --seed=${seed} --seer=$seer
     echo "Start Training Pretrained Model"
     python3 transfer_learning_pretrained.py --seed=${seed} --seer=$seer

@@ -5,9 +5,12 @@ seer=0
 END=102
 for ((j=42;j<=END;j++)); do
     echo "Start Local Training"
-    #for site in ${site_list[@]}; do
-    #    python3 runlocal.py --hospital=site --seed=${j} --seer=0
-    #    sleep 1
+    
+    # for d in 2 3 6 8; do
+    #    echo $d
+    #    python3 runlocal.py --hospital=${d} --seed=${j} --seer=${seer}
+    #    wait
+    # done
 
     echo "Start client 2" 
     python3 runlocal.py --hospital=2 --seed=${j} --seer=${seer}
@@ -24,13 +27,9 @@ for ((j=42;j<=END;j++)); do
     sleep 5
     echo "Start client 8"
     python3 runlocal.py --hospital=8 --seed=${j} --seer=${seer}
-    
-
-    #sleep 5
-    #echo "Start client 9" 
-    #python3 runlocal.py --hospital=9 --seed=${j}
+     
     wait
-    #python3 rundraw.py
+
 done
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM

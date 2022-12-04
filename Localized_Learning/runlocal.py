@@ -1,3 +1,5 @@
+import os 
+import yaml
 import random
 import pickle
 import argparse
@@ -18,19 +20,24 @@ import utils
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--hospital", type=int, choices=range(0, 10), required=True)
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
-parser.add_argument("--seer", type=int, required=True)
+parser.add_argument("--seer", type=int, default=0)
 # parser.add_argument("--encode_dict", type=str, required=True)   # put weight or average
 args = parser.parse_args()
 
 #SEED
+with open('../config.yaml', 'r') as f:
+    config = yaml.load(f, Loader=yaml.Loader)
 
-lr_rate = 0.001
-epoch = 100
-size=0.2
+epoch = config['epoch']
+lr_rate = config['lr_rate']
+size = config['test_size']
+dir_name = config['dir_name']
+set_thres = config['set_thres']
+
 auc_val_result = {}
 hospital_list = [2,3,6,8]
 
-set_thres=0.1
+
 METRICS = [
       metrics.Precision(thresholds=set_thres),
       metrics.Recall(thresholds=set_thres),
@@ -44,13 +51,13 @@ seer = args.seer
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
-dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/fill_10_folder/'
-map = utils.mapping()
+
+# map = utils.mapping()
 drop = utils.drop_year_and_null()
 imputation_fn = utils.imputation()
 
 target_encode = utils.target_encoding()
-train_enc_map_fn = utils.train_enc_map()
+#　train_enc_map_fn = utils.train_enc_map()
 
 if seer == 1:
     output_file_name = 'local_val_df_seer.csv'
@@ -64,23 +71,23 @@ if seer == 1:
 
 elif seer == 0:
     output_file_name = 'local_val_df.csv'
-    columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
+    columns = ["Class","LOC", "Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
-    df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
+            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
+    df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv',index_col=[0])
     df = df[columns]
 
-df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+# df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
 df = df[df['LOC'] == site_id]
 
 
-df = drop(df)
+# df = drop(df)
 # Split df into train and test set
 trainset, testset = train_test_split(df, test_size = size, stratify = df['Class'], random_state = seed)
 
 # Impute the trainset and testset respectively
-trainimp, testimp = imputation_fn(trainset, testset, '10', seed)
+trainimp, testimp = imputation_fn(trainset, testset, config['imp_method'], seed)
 
 # Encode trainset and map the encode dictionary to testset
 x_train, y_train, x_test, y_test = target_encode(trainimp, testimp)
@@ -97,7 +104,7 @@ model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2
 hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
 y_pred = model.predict(x_test)
 auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv(dir_name+output_file_name, index_col=[0])
+val_df = pd.read_csv(dir_name + output_file_name, index_col=[0])
 val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv(dir_name+output_file_name)
+val_df.to_csv(dir_name + output_file_name)
 print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')

@@ -1,3 +1,5 @@
+import os
+import yaml
 import time
 import pickle
 import collections
@@ -48,22 +50,6 @@ class imputation():
 
 
 
-'''class drop_year():
-    def __call__(self, df):
-        df['FullDate'] = df['FullDate'].astype('string')
-        df['year'] = [int(x[:4]) for x in list(df['FullDate'])]
-        index = df[df['year'] < 2010].index.tolist()
-        df = df.iloc[~df.index.isin(index)]
-        df = df.drop(columns = ['year', 'FullDate'])
-        return df
-class iterative_imputation():
-    def __call__(self,df,seed):
-        imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
-        df_imp = imputer.fit_transform(df)
-        df_imp = df_imp.astype(int)
-        df_imp = pd.DataFrame(data = df_imp,columns = df.columns)
-        return df_imp'''
-
 class target_encoding():
     def __init__(self, loo: bool) :
         self.loo = loo
@@ -98,6 +84,7 @@ class train_enc_map():
 
 class mapping():
     def __call__(self, dict, df, col_list) :
+      
         for i in col_list:
             df[i] = df[i].apply(lambda x:dict[i][x])
         return df
@@ -109,26 +96,26 @@ class make_map():
         self.size = size
         
 
-    def __call__(self, df_list, index_list, df, columns):
+    def __call__(self, df_list, index_list, df, columns, imp_method):
         map, enc_dict, imp_dict = {}, {}, {}
 
-        drop_fn = drop_year_and_null()
+        # drop_fn = drop_year_and_null()
         target_encode_fn = target_encoding(False)
         imputation_fn = imputation()
         # iterative_imputation_fn = iterative_imputation()
         train_enc_map_fn = train_enc_map()
         
         for i, site_id in zip(range(len(df_list)), index_list):                     
-            temp = drop_fn(df_list[i])
-            trainset, testset = train_test_split(temp,test_size = self.size,stratify=temp['Class'],random_state=self.seed)
-            trainimp, testimp = imputation_fn(trainset, testset, '10', self.seed)
+            # temp = drop_fn(df_list[i])
+            trainset, testset = train_test_split(df_list[i], test_size = self.size,stratify = df_list[i]['Class'], random_state=self.seed)
+            trainimp, testimp = imputation_fn(trainset, testset, imp_method, self.seed)
             
             # Make train and test imputation dictionary
             imp_dict[site_id] = {"train":trainimp, "test":testimp}
 
             # Traget encode trainset and make trainset encode dictionary
             trainenc = target_encode_fn(trainimp)
-            df_list[i] = train_enc_map_fn(trainenc,trainimp, columns[3:],df)
+            df_list[i] = train_enc_map_fn(trainenc,trainimp, columns[2:],df)
 
         for k in df_list[0].keys():
             temp_list = []

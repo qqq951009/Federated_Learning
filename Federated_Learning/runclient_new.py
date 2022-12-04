@@ -1,4 +1,5 @@
 import os
+import yaml
 import time
 import pickle
 import random
@@ -17,8 +18,6 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 import utils
 
-config = configparser.ConfigParser()
-config.read('config.ini')
 
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--hospital", type=int, choices=range(0, 10), required=True)
@@ -26,7 +25,15 @@ parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
 parser.add_argument("--seer", type=int, required=True)
 args = parser.parse_args()
 
-size = 0.2
+with open('../config.yaml', 'r') as f:
+    config = yaml.load(f, Loader=yaml.Loader)
+
+epoch = config['epoch']
+lr_rate = config['lr_rate']
+size = config['test_size']
+dir_name = config['dir_name']
+set_thres = config['set_thres']
+
 site_id = args.hospital
 seed = args.seed
 seer = args.seer
@@ -40,10 +47,10 @@ if seer == 1:
                 "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2", "SSF4", "OP"]
       
 elif seer == 0:
-    columns = ["Class","LOC", "FullDate","Gender", "Age", "CIG",
+    columns = ["Class","LOC", "Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
-            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"]
+            "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
 
 with open('./encode_dict_folder/imputationdf.pickle', 'rb') as f:
     site_imp_dict = pickle.load(f)
@@ -54,8 +61,6 @@ with open('./encode_dict_folder/mapping.pickle', 'rb') as f:
 
 def main() -> None:
     
-    lr_rate = 0.001
-    set_thres=0.19
     METRICS = [
             metrics.Precision(thresholds=set_thres),
             metrics.Recall(thresholds=set_thres),
@@ -64,18 +69,16 @@ def main() -> None:
     print(f'------------------------{site_id}-----------------')
     
     map = utils.mapping()
-    split_train_test = utils.split_data()
 
     # Select the hospital from the dataframe after imputation
     dfimp = site_imp_dict[site_id]
     trainimp, testimp = dfimp['train'],dfimp['test']
 
     # Map the target encoding
-    trainenc = map(site_map_dict, trainimp, columns[3:])
-    testenc = map(site_map_dict, testimp, columns[3:])
-    trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
-    testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
-
+    trainenc = map(site_map_dict, trainimp, columns[2:])
+    testenc = map(site_map_dict, testimp, columns[2:])
+    # trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
+    # testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
     # Split X and Y
     x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
     x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
@@ -91,7 +94,7 @@ def main() -> None:
     model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
 
     # Start Flower client
-    client = utils.CifarClient(model, x_train, y_train, x_test, y_test, site_id, size, seed, seer)
+    client = utils.CifarClient(model, x_train, y_train, x_test, y_test, site_id, size, seed, seer, config['dir_name'])
     fl.client.start_numpy_client("[::]:8080", client=client)
 
 if __name__ == "__main__":
