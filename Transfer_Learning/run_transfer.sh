@@ -1,7 +1,7 @@
 #!/bin/bash
 declare -i seer=0
 END=102
-for ((seed=48;seed<=END;seed++)); do
+for ((seed=44;seed<=END;seed++)); do
     python3 make_encode_map.py --seed=${seed} --seer=$seer
     echo "Start Training Pretrained Model"
     python3 transfer_learning_pretrained.py --seed=${seed} --seer=$seer
@@ -16,6 +16,22 @@ for ((seed=48;seed<=END;seed++)); do
 
     echo "site 8 Finetune Model"
     python3 transfer_learning_finetune.py --seed=${seed} --seer=$seer --hospital=8 
+    sleep 1
+
+    echo "site 9 Finetune Model"
+    python3 transfer_learning_finetune.py --seed=${seed} --seer=$seer --hospital=9
+    sleep 1
+
+    echo "site 10 Finetune Model"
+    python3 transfer_learning_finetune.py --seed=${seed} --seer=$seer --hospital=10 
+    sleep 1
+
+    echo "site 11 Finetune Model"
+    python3 transfer_learning_finetune.py --seed=${seed} --seer=$seer --hospital=11
+    sleep 1
+
+    echo "site 12 Finetune Model"
+    python3 transfer_learning_finetune.py --seed=${seed} --seer=$seer --hospital=12 
     sleep 1
 
     if (($seer == 1));

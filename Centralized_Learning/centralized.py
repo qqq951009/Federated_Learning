@@ -67,11 +67,9 @@ elif seer == 0:
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
-  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv')
-  # df2 = pd.read_csv(r'')
-  # df["Class"] = df['Class'].apply(lambda x:1 if x != 0 else 0)
+  df = pd.read_csv(config['data_dir']['8hos'],index_col=[0])
   df = df[columns]
-  site_list = [2,3,6,8]
+  site_list = [2,3,6,8,9,10,11,12]
 
 # Drop the year smaller than 2010
 #df = drop(df)

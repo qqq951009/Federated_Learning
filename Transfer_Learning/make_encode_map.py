@@ -14,7 +14,7 @@ with open('../config.yaml', 'r') as f:
 
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
-parser.add_argument("--seer", type=int, required=True)
+parser.add_argument("--seer", type=int, default=0)
 args = parser.parse_args()
 seed = args.seed
 seer = args.seer
@@ -36,9 +36,8 @@ elif seer == 0:
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
-  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv')
+  df = pd.read_csv(config['data_dir']['8hos'],index_col=[0])
   df = df[columns]
-  # df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
 
 for i in np.unique(df.LOC):
     tempdf = df[df['LOC'] == i]

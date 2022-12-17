@@ -17,16 +17,16 @@ from sklearn.model_selection import train_test_split
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from category_encoders import TargetEncoder, LeaveOneOutEncoder
 from tensorflow.keras.layers import Dense, Embedding, Flatten,Dropout
-import configparser
+import yaml
 import utils
 
-config = configparser.ConfigParser()
-config.read('config.ini')
+with open('../config.yaml', 'r') as f:
+    config = yaml.load(f, Loader=yaml.Loader)
 
 
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
-parser.add_argument("--seer", type=int, required=True)
+parser.add_argument("--seer", type=int, default=0)
 args = parser.parse_args()
 
 #SEED
@@ -63,7 +63,7 @@ if seer == 1:
     columns = ["Class","LOC", "FullDate", "Gender", "Age", "AJCCstage", 
                 "DIFF", "LYMND", "TMRSZ", "SSF1", "SSF2", "SSF4", "OP"]
 elif seer == 0:
-    df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_final.csv')
+    df = pd.read_csv(config['data_dir']['8hos'],index_col=[0])
     min_client = len(np.unique(df.LOC))
     columns = ["Class","LOC", "Gender", "Age", "CIG",
                 "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
@@ -116,7 +116,7 @@ def main() -> None:
     )
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("[::]:8080", config={"num_rounds":rounds}, strategy=strategy)
+    fl.server.start_server("[::]:6000", config={"num_rounds":rounds}, strategy=strategy)
 
 
 '''def get_eval_fn(model):

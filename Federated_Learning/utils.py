@@ -164,7 +164,7 @@ class sample_method():
 
 
 class CifarClient(fl.client.NumPyClient):
-    def __init__(self, model, x_train, y_train, x_test, y_test, cid, size, seed, seer,dir_name):
+    def __init__(self, model, x_train, y_train, x_test, y_test, cid, size, seed, seer, dir_name):
         self.model = model
         self.x_train, self.y_train = x_train, y_train
         self.x_test, self.y_test = x_test, y_test
@@ -178,7 +178,7 @@ class CifarClient(fl.client.NumPyClient):
             self.hospital_list = [2,3,6,8,9]
             self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/iterative_impute_folder/df_fedavg_average_seer'
         elif seer == 0:
-            self.hospital_list = [2,3,6,8]
+            self.hospital_list = [2,3,6,8,9,10,11,12]
             self.output_file_name = dir_name+'df_fedavg_average'
             
     def get_parameters(self):
@@ -209,11 +209,11 @@ class CifarClient(fl.client.NumPyClient):
         }
         self.record+=history.history["val_auc"]
         print(config['rnd'])
-        if config['rnd'] == 20:
-            print("output length : ",len(self.record))
-            # fl_auc_df = pd.read_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv') 
-            # fl_auc_df[f'seed{self.seed}'] = self.record
-            # fl_auc_df.to_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv',index=False)
+        # if config['rnd'] == 20:
+        #     print("output length : ",len(self.record))
+        #     fl_auc_df = pd.read_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv') 
+        #     fl_auc_df[f'seed{self.seed}'] = self.record
+        #     fl_auc_df.to_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv',index=False)
             
         return parameters_prime, num_examples_train, results
 
@@ -238,9 +238,9 @@ class CifarClient(fl.client.NumPyClient):
             
             print("----------------evaluate---------------")
             print(self.cid, auroc)
-            # val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
-            # val_df.loc[self.seed,'site'+str(self.cid)] =  auroc
-            # val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')
+            val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
+            val_df.loc[self.seed,'site'+str(self.cid)] =  auroc
+            val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')
 
         # Evaluate global model parameters on the local test data and return results
         loss,precision,recall,_ = self.model.evaluate(self.x_test, self.y_test)

@@ -20,9 +20,9 @@ import utils
 
 
 parser = argparse.ArgumentParser(description="Flower")
-parser.add_argument("--hospital", type=int, choices=range(0, 10), required=True)
+parser.add_argument("--hospital", type=int, choices=range(0, 100), required=True)
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
-parser.add_argument("--seer", type=int, required=True)
+parser.add_argument("--seer", type=int, default=0)
 args = parser.parse_args()
 
 with open('../config.yaml', 'r') as f:
@@ -73,16 +73,13 @@ def main() -> None:
     # Select the hospital from the dataframe after imputation
     dfimp = site_imp_dict[site_id]
     trainimp, testimp = dfimp['train'],dfimp['test']
-
+    
     # Map the target encoding
     trainenc = map(site_map_dict, trainimp, columns[2:])
     testenc = map(site_map_dict, testimp, columns[2:])
-    # trainenc['Class'] = trainenc['Class'].apply(lambda x:1 if x!=1 else 0)
-    # testenc['Class'] = testenc['Class'].apply(lambda x:1 if x!=1 else 0)
     # Split X and Y
     x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
     x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
-
 
     # Load and compile Keras model
     opt_adam = Adam(learning_rate=lr_rate)
@@ -95,7 +92,7 @@ def main() -> None:
 
     # Start Flower client
     client = utils.CifarClient(model, x_train, y_train, x_test, y_test, site_id, size, seed, seer, config['dir_name'])
-    fl.client.start_numpy_client("[::]:8080", client=client)
+    fl.client.start_numpy_client("[::]:6000", client=client)
 
 if __name__ == "__main__":
     main()

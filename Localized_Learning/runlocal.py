@@ -18,7 +18,7 @@ from sklearn.metrics import roc_auc_score
 import utils
 
 parser = argparse.ArgumentParser(description="Flower")
-parser.add_argument("--hospital", type=int, choices=range(0, 10), required=True)
+parser.add_argument("--hospital", type=int, choices=range(0, 100), required=True)
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
 parser.add_argument("--seer", type=int, default=0)
 # parser.add_argument("--encode_dict", type=str, required=True)   # put weight or average
@@ -75,12 +75,10 @@ elif seer == 0:
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
-    df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv',index_col=[0])
+    df = pd.read_csv(config['data_dir']['8hos'],index_col=[0])
     df = df[columns]
 
-# df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
 df = df[df['LOC'] == site_id]
-
 
 # df = drop(df)
 # Split df into train and test set

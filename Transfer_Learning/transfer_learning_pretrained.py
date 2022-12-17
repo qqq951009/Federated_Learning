@@ -55,12 +55,11 @@ elif seer == 0:
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
-  df = pd.read_csv(r'/home/refu0917/lungcancer/server/AllCaseCtrl_RAW_Process.csv')
+  df = pd.read_csv(config['data_dir']['8hos'],index_col=[0])
   df = df[columns]
-  # df['Class'] = df['Class'].apply(lambda x:1 if x != 0 else 0)
   output_file_name = 'transfer_learning_score.csv'
 
-for i in [2,3,6,8]:
+for i in [2,3,6,8,9,10,11,12]:
     tempdf = df[df['LOC'] == i]
     df_list += [tempdf]
     index_list.append(i)
