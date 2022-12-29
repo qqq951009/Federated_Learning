@@ -1,0 +1,12 @@
+lr_rate : 0.001
+epoch : 100
+test_size : 0.2
+batch_size : 16
+set_thres : 0.1
+dir_name : '/home/refu0917/lungcancer/remote_output1/output_folder/fill_median_folder_8hos/'
+imp_method : 'median'
+
+data_dir : 
+  4hos : '/home/refu0917/lungcancer/server/AllCaseCtrl_4hospital.csv'
+  8hos : '/home/refu0917/lungcancer/server/AllCaseCtrl_8hospital.csv'
+  seer : '/home/refu0917/lungcancer/data/seerdb.csv'
