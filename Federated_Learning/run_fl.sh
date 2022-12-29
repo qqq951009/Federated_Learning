@@ -3,7 +3,7 @@
 #declare -i j=42
 seer=0
 END=102
-for ((j=42;j<=END;j++)); do
+for ((j=44;j<=END;j++)); do
 
     python3 make_encode_map.py --seed=${j} --seer=${seer}
     
@@ -43,12 +43,7 @@ for ((j=42;j<=END;j++)); do
     echo "Starting client 12"
     python3 runclient_new.py --hospital=12 --seed=${j} --seer=${seer} &
     sleep 1
-    # if (($seer == 1));
-    # then
-    #    echo "Starting client 9"
-    #    python3 runclient_new.py --hospital=9 --seed=${j} --seer=${seer} &
-    #    sleep 1
-    # fi
+
     wait
     
 done

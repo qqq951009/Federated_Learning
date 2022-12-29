@@ -13,7 +13,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
-
+from sklearn.preprocessing import OneHotEncoder
 
 # Use the data from 2011 and the data contain less than 9 null value counts
 class drop_year_and_null():
@@ -61,6 +61,16 @@ class target_encoding():
         x_train_enc, x_test_enc = encoder.transform(x_train), encoder.transform(x_test)
 
         return x_train_enc, y_train, x_test_enc, y_test
+
+class onehot_encoding():
+    def __call__(self, trainset, testset):
+        columns = trainset.columns[2:]
+        x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
+        x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
+        
+        enc = OneHotEncoder()
+        
+        pass
 
 '''class train_enc_map():
     def __call__(self, dfenc, dfimp, columns,df):

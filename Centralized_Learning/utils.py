@@ -63,6 +63,16 @@ class target_encoding():
         x_test_enc['LOC'] = testset['LOC']
         return x_train_enc, y_train, x_test_enc
 
+class onehot_encoding():
+    def __call__(self, trainset, testset):
+        x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
+        x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
+        x_train_onehot = pd.get_dummies(x_train.astype(str))
+        test_onehot = pd.get_dummies(x_test.astype(str))
+        test_onehot['Class'] = y_test
+        test_onehot['LOC'] = testset['LOC']
+        return x_train_onehot, y_train, test_onehot
+
 class sample_method():
     def __init__(self,method,strategy,seed):
         self.method = method

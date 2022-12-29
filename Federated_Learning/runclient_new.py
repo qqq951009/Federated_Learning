@@ -84,14 +84,14 @@ def main() -> None:
     # Load and compile Keras model
     opt_adam = Adam(learning_rate=lr_rate)
     model = Sequential() 
-    model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
-    model.add(Dense(16, activation='relu'))
-    model.add(Dense(10, activation='relu'))    
-    model.add(Dense(1, activation='sigmoid'))
-    model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
+    model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],), name='base1')) #,kernel_regularizer='l2'
+    model.add(Dense(16, activation='relu', name='base2'))
+    model.add(Dense(10, activation='relu', name='base3'))    
+    model.add(Dense(1, activation='sigmoid', name='personal'))
+    # model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
 
     # Start Flower client
-    client = utils.CifarClient(model, x_train, y_train, x_test, y_test, site_id, size, seed, seer, config['dir_name'])
+    client = utils.CifarClient_personal(model, x_train, y_train, x_test, y_test, site_id, size, seed, seer, config)
     fl.client.start_numpy_client("[::]:6000", client=client)
 
 if __name__ == "__main__":
