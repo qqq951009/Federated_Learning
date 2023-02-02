@@ -1,12 +1,26 @@
-lr_rate : 0.001
+lr_rate : 0.0001
+decay : 0.0005
+lr_pretrained : 0.0001
+lr_fintuned : 0.00001
 epoch : 100
 test_size : 0.2
 batch_size : 16
 set_thres : 0.1
-dir_name : '/home/refu0917/lungcancer/remote_output1/output_folder/fill_median_folder_8hos/'
+dir_name : '/home/refu0917/lungcancer/remote_output1/output_folder/onehot/'
 imp_method : 'median'
-
+site_list_4 : [2,3,6,8]
+site_list_8 : [2,3,6,8,9,10,11,12]
 data_dir : 
   4hos : '/home/refu0917/lungcancer/server/AllCaseCtrl_4hospital.csv'
   8hos : '/home/refu0917/lungcancer/server/AllCaseCtrl_8hospital.csv'
   seer : '/home/refu0917/lungcancer/data/seerdb.csv'
+
+lr_rate_custom : 
+  site2 : 0.001
+  site3 : 0.001
+  site6 : 0.001
+  site8 : 0.001
+  site9 : 0.001
+  site10 : 0.001
+  site11 : 0.001
+  site12 : 0.001

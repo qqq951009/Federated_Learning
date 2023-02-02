@@ -19,11 +19,12 @@ from category_encoders import TargetEncoder, LeaveOneOutEncoder
 from tensorflow.keras.layers import Dense, Embedding, Flatten,Dropout
 import yaml
 import utils
+import os 
 
 with open('../config.yaml', 'r') as f:
     config = yaml.load(f, Loader=yaml.Loader)
 
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
 parser.add_argument("--seer", type=int, default=0)

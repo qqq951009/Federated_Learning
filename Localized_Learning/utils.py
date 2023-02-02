@@ -63,14 +63,15 @@ class target_encoding():
         return x_train_enc, y_train, x_test_enc, y_test
 
 class onehot_encoding():
-    def __call__(self, trainset, testset):
-        columns = trainset.columns[2:]
-        x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
-        x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
-        
-        enc = OneHotEncoder()
-        
-        pass
+    def __call__(self, trainimp, testimp):
+        df = pd.concat([trainimp, testimp])
+        df_x, df_y = df.drop(columns=['Class', 'LOC']), df['Class']
+        x_enc = pd.get_dummies(df_x.astype(str), drop_first=True)
+        x_train_enc = x_enc.loc[trainimp.index]
+        x_test_enc = x_enc.loc[testimp.index]
+        y_train = df_y.loc[trainimp.index]
+        y_test = df_y.loc[testimp.index]
+        return  x_train_enc, y_train, x_test_enc, y_test
 
 '''class train_enc_map():
     def __call__(self, dfenc, dfimp, columns,df):

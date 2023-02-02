@@ -59,19 +59,21 @@ class target_encoding():
         encoder = TargetEncoder(cols=columns, smoothing=0.05)
         encoder = encoder.fit(x_train, y_train)
         x_train_enc, x_test_enc = encoder.transform(x_train), encoder.transform(x_test)
-        x_test_enc['Class'] = y_test
         x_test_enc['LOC'] = testset['LOC']
+        x_test_enc['Class'] = y_test
         return x_train_enc, y_train, x_test_enc
 
 class onehot_encoding():
-    def __call__(self, trainset, testset):
-        x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
-        x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
-        x_train_onehot = pd.get_dummies(x_train.astype(str))
-        test_onehot = pd.get_dummies(x_test.astype(str))
-        test_onehot['Class'] = y_test
-        test_onehot['LOC'] = testset['LOC']
-        return x_train_onehot, y_train, test_onehot
+    def __call__(self, trainimp, testimp):
+        df = pd.concat([trainimp, testimp])
+        df_x, df_y = df.drop(columns=['Class', 'LOC']), df['Class']
+        x_enc = pd.get_dummies(df_x.astype(str), drop_first=True)
+        x_train = x_enc.loc[trainimp.index]
+        testset = x_enc.loc[testimp.index]
+        y_train = df_y.loc[trainimp.index]
+        testset['Class'] = df_y.loc[testimp.index]
+        testset['LOC'] = df.loc[testimp.index]['LOC']
+        return  x_train, y_train, testset
 
 class sample_method():
     def __init__(self,method,strategy,seed):

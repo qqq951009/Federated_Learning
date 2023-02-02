@@ -47,7 +47,48 @@ class imputation():
         train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
         return train_imp, test_imp
 
+def imputation_fn(df_train, df_test, imp_method, seed):
+    if imp_method == '10':
+        train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
+    if imp_method == 'median':
+        train_imp = df_train.fillna(df_train.median())
+        test_imp = df_test.fillna(df_train.median())
+    if imp_method == 'iterative':
+        imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
+        imputer = imputer.fit(df_train)
+        trainimp = imputer.transform(df_train)
+        testimp = imputer.transform(df_test)
+        train_imp, test_imp = pd.DataFrame(data=trainimp, columns=df_train.columns), pd.DataFrame(data=testimp, columns=df_test.columns)
 
+    train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
+    return train_imp, test_imp
+
+def onehot_encoding(df, siteid, train_index, test_index):
+    print(siteid)
+    trainset, testset = [], []
+    df = pd.get_dummies(df, drop_first=True, columns=df.columns[2:])
+    df = df[df['LOC'] == siteid]
+    trainset = df.loc[train_index]
+    testset = df.loc[test_index]
+    trainset = trainset.astype(int)
+    testset = testset.astype(int)
+    x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
+    x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
+    return x_train, y_train, x_test, y_test
+
+def onehot_aligment(df, seed, site_id, config):
+    dfencode = pd.DataFrame()
+    train_index, test_index = [], []
+    for i in config['site_list_8']:
+        tempdf = df[df['LOC'] == i]
+        train, test = train_test_split(tempdf, test_size = config['test_size'], stratify = tempdf['Class'], random_state = seed)
+        if i == site_id:
+            train_index = train.index
+            test_index = test.index
+        trainimp, testimp = imputation_fn(train, test, config['imp_method'], seed)
+        dfencode = pd.concat([dfencode, trainimp, testimp])
+    x_train, y_train, x_test, y_test = onehot_encoding(dfencode, site_id, train_index, test_index)
+    return x_train, y_train, x_test, y_test
 
 class target_encoding():
     def __init__(self, loo: bool) :
@@ -180,12 +221,14 @@ class CifarClient(fl.client.NumPyClient):
             self.hospital_list = [2,3,6,8,9]
             self.output_file_name = '/home/refu0917/lungcancer/remote_output1/output_folder/iterative_impute_folder/df_fedavg_average_seer'
         elif seer == 0:
-            self.hospital_list = [2,3,6,8,9,10,11,12]
+            self.hospital_list = client_config['site_list_8']
             self.output_file_name = client_config['dir_name']+'df_fedavg_average'
         self.METRICS = [metrics.Precision(thresholds=self.set_thres),
                     metrics.Recall(thresholds=self.set_thres),
                     metrics.AUC()]
-        self.opt_adam = Adam(learning_rate=0.001)         
+        # print(cid, 'site'+str(cid), client_config['lr_rate_custom']['site'+str(cid)])
+        self.opt_adam = Adam(learning_rate=client_config['lr_rate_custom']['site'+str(cid)], decay=client_config['decay'])
+        # self.opt_adam = Adam(learning_rate=0.0001, decay=0.005)         
     def get_parameters(self):
         """Get parameters of the local model."""
         raise Exception("Not implemented (server-side parameter initialization)")
@@ -234,7 +277,7 @@ class CifarClient(fl.client.NumPyClient):
         y_pred = self.model.predict(self.x_test)
         
         # Last round drawlift chart and Evaluate aggregate model on other hospital
-        if config['rnd'] == 5:
+        if config['rnd'] == 30:
             
         # Start evaluate each hospital validation set
             self.auc_val_result[str(self.cid)] = [roc_auc_score(self.y_test,y_pred)]            # Last round result 
@@ -244,9 +287,9 @@ class CifarClient(fl.client.NumPyClient):
             auroc = roc_auc_score(self.y_test,y_test_pred)
             
             print("----------------evaluate---------------")
-            print(self.cid, auroc)
+            print(f'site{self.cid}, AUROC score : {auroc}')
             '''val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
-            val_df.loc[self.seed,'site'+str(self.cid)] =  auroc
+            val_df.loc[self.seed,'site'+str(self.cid)+'_temp'] =  auroc
             val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')'''
 
         # Evaluate global model parameters on the local test data and return results
@@ -277,9 +320,15 @@ class CifarClient_personal(fl.client.NumPyClient):
             self.hospital_list = [2,3,6,8,9,10,11,12]
             self.output_file_name = client_config['dir_name']+'df_fedavg_average'
         self.METRICS = [metrics.Precision(thresholds=self.set_thres),
-                    metrics.Recall(thresholds=self.set_thres),
-                    metrics.AUC()]
-        self.opt_adam = Adam(learning_rate=0.001)         
+                        metrics.Recall(thresholds=self.set_thres),
+                        metrics.AUC()]
+        # self.opt_adam = Adam(learning_rate=client_config['lr_rate_custom']['site'+str(cid)], decay=client_config['decay'])
+        if self.cid == 12:
+            print('decay = 0.005')
+            self.opt_adam = Adam(learning_rate=client_config['lr_rate'], decay=0.005)
+        else:
+            print('decay = 0.0005')
+            self.opt_adam = Adam(learning_rate=client_config['lr_rate'], decay=client_config['decay'])
     def get_parameters(self):
         """Get parameters of the local model."""
         raise Exception("Not implemented (server-side parameter initialization)")
@@ -339,8 +388,8 @@ class CifarClient_personal(fl.client.NumPyClient):
         # Use aggregate model to predict test data
         y_pred = self.model.predict(self.x_test)
         
-        # Last round drawlift chart and Evaluate aggregate model on other hospital
-        if config['rnd'] == 3:
+        
+        if config['rnd'] == 20:
             
         # Start evaluate each hospital validation set
             self.auc_val_result[str(self.cid)] = [roc_auc_score(self.y_test,y_pred)]            # Last round result 
@@ -350,9 +399,9 @@ class CifarClient_personal(fl.client.NumPyClient):
             auroc = roc_auc_score(self.y_test,y_test_pred)
             
             print("----------------evaluate---------------")
-            print(self.cid, auroc)
+            print(f'site{self.cid}, AUROC score : {auroc}')
             val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
-            val_df.loc[self.seed,'site'+str(self.cid)] =  auroc
+            val_df.loc[self.seed,'site'+str(self.cid)+'_personal(1-4/custom)'] =  auroc
             val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')
             
         # Evaluate global model parameters on the local test data and return results

@@ -4,18 +4,18 @@ seer=0
 END=43
 for ((j=42;j<END;j++)); do
 
-    python3 make_encode_map.py --seed=${j} --seer=${seer}
+    # python3 make_encode_map.py --seed=${j} --seer=${seer}
     
     echo "Starting seed" ${j}
-    python3 runserver.py --seed=${j} --seer=${seer} &
+    python3 runserver_onehot.py --seed=${j} --seer=${seer} &
     sleep 1  # Sleep for 3s to give the server enough time to start
 
     echo "Starting client 2"
-    python3 runclient_new.py --hospital=2 --seed=${j} --seer=${seer} &
+    python3 runclient_onehot.py --hospital=2 --seed=${j} &
     sleep 1
 
     echo "Starting client 3"
-    python3 runclient_new.py --hospital=6 --seed=${j} --seer=${seer} &
+    python3 runclient_onehot.py --hospital=6 --seed=${j} &
     sleep 1
 
     wait

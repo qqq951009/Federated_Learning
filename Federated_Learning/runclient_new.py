@@ -18,7 +18,7 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 import utils
 
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--hospital", type=int, choices=range(0, 100), required=True)
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)

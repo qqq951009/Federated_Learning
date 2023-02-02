@@ -19,7 +19,7 @@ import utils
 
 # Parse command line argument `partition`
 parser = argparse.ArgumentParser(description="Flower")
-parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
+parser.add_argument("--seed", type=int, default=42, choices=range(0, 1000))
 parser.add_argument("--hospital", type=int, choices=range(0, 1000), required=True)
 parser.add_argument("--seer", type=int, default=0)
 args = parser.parse_args()
