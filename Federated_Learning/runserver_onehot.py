@@ -38,11 +38,12 @@ np.random.seed(seed)
 tf.random.set_seed(seed)
 
 
-lr_rate = 0.0001 # config['lr_rate']
+lr_rate = config['lr_rate']
+decay = config['decay']
 size = config['test_size']
 dir_name = config['dir_name']
 set_thres = config['set_thres']
-rounds = 30
+rounds = 20
 
 METRICS = [
       metrics.Precision(thresholds=set_thres),
@@ -74,7 +75,7 @@ x_train, y_train, x_test, y_test = utils.onehot_aligment(df, seed, 0, config)
 
 def main() -> None:
     
-    opt_adam = Adam(learning_rate=lr_rate, decay=0.0005)
+    # opt_adam = Adam(learning_rate=lr_rate, decay=decay)
     model = Sequential() 
     model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],), name='base1')) #,kernel_regularizer='l2'
     model.add(Dense(16, activation='relu', name='base2'))

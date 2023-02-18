@@ -16,10 +16,11 @@ from tensorflow.keras.layers import Dense, Embedding, Flatten,Dropout
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 import utils
-
+import mlflow.tensorflow
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Parse command line argument `partition`
 parser = argparse.ArgumentParser(description="Flower")
-parser.add_argument("--seed", type=int, default=42, choices=range(0, 1000))
+parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
 parser.add_argument("--hospital", type=int, choices=range(0, 1000), required=True)
 parser.add_argument("--seer", type=int, default=0)
 args = parser.parse_args()
@@ -29,6 +30,7 @@ with open('../config.yaml', 'r') as f:
 
 epoch = config['epoch']
 lr_rate = config['lr_rate']
+decay = config['decay']
 size = config['test_size']
 dir_name = config['dir_name']
 set_thres = config['set_thres']
@@ -51,7 +53,7 @@ elif seer == 0:
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
-  output_file_name = 'transfer_learning_score.csv'
+  output_file_name = f'transfer_score_({lr_rate},{decay}).csv'
 
 with open('imputationdf.pickle', 'rb') as f:
     site_imp_dict = pickle.load(f)
@@ -59,6 +61,15 @@ with open('mapping.pickle', 'rb') as f:
     site_map_dict = pickle.load(f)
 
 def main() -> None:
+    mlflow.tensorflow.autolog()
+    mlflow.set_experiment("Transfer (Target_new)")
+    mlflow.set_tag("mlflow.runName", "site"+str(hospital)+'_'+str(seed)+'_('+str(lr_rate)+','+str(decay)+')')
+
+    METRICS = [
+            metrics.Precision(thresholds=set_thres),
+            metrics.Recall(thresholds=set_thres),
+            metrics.AUC()
+    ]
 
     map = utils.mapping()
 
@@ -77,7 +88,9 @@ def main() -> None:
     x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
 
     # Load and compile Keras model
+    opt_adam = Adam(learning_rate=lr_rate)  # , decay=decay
     model = keras.models.load_model('pretrained_model')
+    model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
     model.fit(x_train, y_train, batch_size = 16, epochs = epoch, verbose=2, validation_data=(x_test, y_test))
     y_pred = model.predict(x_test)
     score_df = pd.read_csv(dir_name + output_file_name,index_col=[0])

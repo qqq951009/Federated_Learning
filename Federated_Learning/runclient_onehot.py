@@ -30,7 +30,8 @@ with open('../config.yaml', 'r') as f:
     config = yaml.load(f, Loader=yaml.Loader)
 
 epoch = config['epoch']
-lr_rate = 0.0001 # config['lr_rate']
+lr_rate = config['lr_rate']
+decay = config['decay']
 size = config['test_size']
 dir_name = config['dir_name']
 set_thres = config['set_thres']
@@ -57,12 +58,12 @@ x_train, y_train, x_test, y_test = utils.onehot_aligment(df, seed, site_id, conf
 
 def main() -> None:
     print(f'------------------------{site_id}-----------------')
-    '''mlflow.tensorflow.autolog()
-    mlflow.set_experiment("Federated (OneHot)")
-    mlflow.set_tag("mlflow.runName", "site"+str(site_id)+'_'+str(seed)+'_w-decay')'''
+    #mlflow.tensorflow.autolog()
+    #mlflow.set_experiment("Federated (OneHot)")
+    #mlflow.set_tag("mlflow.runName", "site"+str(site_id)+'_'+str(seed)+'_w-decay')
 
     # Load and compile Keras model
-    opt_adam = Adam(learning_rate=lr_rate, decay=0.0005)
+    # opt_adam = Adam(learning_rate=lr_rate, decay=decay)
     model = Sequential() 
     model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],), name='base1')) #,kernel_regularizer='l2'
     model.add(Dense(16, activation='relu', name='base2'))
@@ -76,4 +77,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    

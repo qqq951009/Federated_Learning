@@ -38,8 +38,8 @@ with open('../config.yaml', 'r') as f:
       config = yaml.load(f, Loader=yaml.Loader)
 
 epoch = config['epoch']
-lr_rate = config['lr_rate']
-decay = 0.0005# config['decay']
+lr_rate = 0.0001  # config['lr_rate']
+decay = 0.0005    # config['decay']
 size = config['test_size']
 dir_name = config['dir_name']
 set_thres = config['set_thres']
@@ -68,7 +68,7 @@ if seer == 1:
   site_list = [2,3,6,8,9]
   
 elif seer == 0:
-  output_file_name = 'centralized_score_(1-2,5-4).csv'
+  output_file_name = f'centralized_score_({lr_rate},{decay}).csv'
   columns = ["Class","LOC", "Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
@@ -82,28 +82,28 @@ trainset, testset = preprocess_df(df, site_list)
 # Impute the trainset and testset respectively
 trainimp, testimp = imputation_fn(trainset, testset, config['imp_method'], seed)
 # Encode trainset and map the encode dictionary to testset
-x_train, y_train, testenc  = onehot_encode(trainimp, testimp)
-# x_train, y_train, testenc = target_encode(trainimp, testimp)
+x_train, y_train, testenc = utils.encode(trainimp, testimp, 'onehot')
+
 x_test_enc, y_test_enc = testenc.drop(columns=['Class','LOC']),testenc['Class']
 
 def main() -> None:
     '''mlflow.tensorflow.autolog()
-    mlflow.set_experiment("Centralzied (OneHot) test")
-    mlflow.set_tag("mlflow.runName", "seed"+str(seed)+"_wdecay5-4")'''
+    mlflow.set_experiment("Centralzied (Onehot_new) ")
+    mlflow.set_tag("mlflow.runName", "seed"+str(seed)+'_('+str(lr_rate)+','+str(decay)+')')'''
     METRICS = [
             metrics.Precision(thresholds=set_thres),
             metrics.Recall(thresholds=set_thres),
             metrics.AUC()
     ]
-    '''def scheduler(epoch, lr):
+    def scheduler(epoch, lr):
       if epoch < 10:
         return lr
       else:
         return lr * tf.math.exp(-0.1)
-    callback = tf.keras.callbacks.LearningRateScheduler(scheduler)'''
+    callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
     # Load and compile Keras model
-    opt_adam = Adam(learning_rate=0.01, decay = 0.0005)# , decay=0.005
+    opt_adam = Adam(learning_rate=lr_rate, decay=decay)# , decay=decay
     model = Sequential() 
     model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
     model.add(Dense(16, activation='relu'))
@@ -125,6 +125,5 @@ def main() -> None:
     print(temp_auc_score)
     score_df.loc[seed] = temp_auc_score
     score_df.to_csv(dir_name+output_file_name)
-
 if __name__ == "__main__":
     main()

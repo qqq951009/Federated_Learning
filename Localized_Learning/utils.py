@@ -48,6 +48,23 @@ class imputation():
         train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
         return train_imp, test_imp
 
+'''def imputation(df_train, df_test, imp_method, seed):
+    if imp_method == '10':
+        train_imp, test_imp = df_train.fillna(10), df_test.fillna(10)
+
+    if imp_method == 'median':     
+        train_imp = df_train.fillna(df_train.median())
+        test_imp = df_test.fillna(df_train.median())
+
+    if imp_method == 'iterative':
+        imputer = IterativeImputer(random_state=seed, estimator=RandomForestClassifier(),initial_strategy = 'most_frequent')
+        imputer = imputer.fit(df_train)
+        trainimp = imputer.transform(df_train)
+        testimp = imputer.transform(df_test)
+        train_imp, test_imp = pd.DataFrame(data=trainimp, columns=df_train.columns), pd.DataFrame(data=testimp, columns=df_test.columns)
+
+    train_imp, test_imp = train_imp.astype(int), test_imp.astype(int)
+    return train_imp, test_imp'''
 
 
 class target_encoding():
@@ -73,23 +90,25 @@ class onehot_encoding():
         y_test = df_y.loc[testimp.index]
         return  x_train_enc, y_train, x_test_enc, y_test
 
-'''class train_enc_map():
-    def __call__(self, dfenc, dfimp, columns,df):
-        trainenc_dict = {}
-        for col in columns:
-            trainenc_dict[col] = dict((int(key),0) for key in df[col].value_counts().index.tolist())
-            trainenc_dict[col][10] = 0
-            implist = dfimp[col].value_counts().index.tolist()
-           
-            for i in implist:
-                id = dfimp.loc[dfimp[col] == i].index[0]
-                trainenc_dict[col][i] = dfenc.loc[id, col]  
-                 
-        return trainenc_dict
-        
-class mapping():
-    def __call__(self, dict, df, columns) :
-        for i in columns:
-            df[i] = df[i].apply(lambda x:dict[i][x])
-        return df'''
+def encode(trainset, testset, method):
+    if method == 'onehot':
+        df = pd.concat([trainset, testset])
+        df_x, df_y = df.drop(columns=['Class', 'LOC']), df['Class']
+        x_enc = pd.get_dummies(df_x.astype(str), drop_first=True)
+        x_train_enc = x_enc.loc[trainset.index]
+        x_test_enc = x_enc.loc[testset.index]
+        y_train = df_y.loc[trainset.index]
+        y_test = df_y.loc[testset.index]
 
+    elif method == 'target':
+        columns = trainset.columns[2:]
+        x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
+        x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
+        encoder = TargetEncoder(cols=columns, smoothing=0.05)
+        encoder = encoder.fit(x_train, y_train)
+        x_train_enc, x_test_enc = encoder.transform(x_train), encoder.transform(x_test)
+
+    else:
+        assert method == 'target' or method == 'onehot'
+
+    return x_train_enc, y_train, x_test_enc, y_test

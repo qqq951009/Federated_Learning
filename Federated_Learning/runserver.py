@@ -93,7 +93,7 @@ def main() -> None:
     x_train,y_train = trainenc.drop(columns = ['Class', 'LOC']), trainenc['Class']
     x_test, y_test = testenc.drop(columns = ['Class', 'LOC']), testenc['Class']
 
-    opt_adam = Adam(learning_rate=lr_rate)
+    # opt_adam = Adam(learning_rate=0.001)
     model = Sequential() 
     model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],), name='base1')) #,kernel_regularizer='l2'
     model.add(Dense(16, activation='relu', name='base2'))

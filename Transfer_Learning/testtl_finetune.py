@@ -31,7 +31,8 @@ with open('../config.yaml', 'r') as f:
     config = yaml.load(f, Loader=yaml.Loader)
 
 epoch = config['epoch']
-lr_rate = config['lr_fintuned']
+lr_rate = config['lr_rate']
+decay = config['decay']
 size = config['test_size']
 dir_name = config['dir_name']
 set_thres = config['set_thres']
@@ -70,7 +71,7 @@ elif seer == 0:
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
   df = pd.read_csv(config['data_dir']['8hos'],index_col=[0])
   df = df[columns]
-  output_file_name = 'transfer_score_diff_lr.csv'
+  output_file_name = f'transfer_score_({lr_rate},{decay}).csv'
 
 
 dfencode = pd.DataFrame()
@@ -90,11 +91,11 @@ x_train, y_train, x_test, y_test = onehot_encode(dfencode, hospital, train_index
 
 def main() -> None:
     mlflow.tensorflow.autolog()
-    mlflow.set_experiment("Transfer (OneHot) diff learning rate")
-    mlflow.set_tag("mlflow.runName", "site"+str(hospital)+'_'+str(seed))
+    mlflow.set_experiment("Transfer (Onehot_new)")
+    mlflow.set_tag("mlflow.runName", "site"+str(hospital)+'_'+str(seed)+'_('+str(lr_rate)+','+str(decay)+')')
 
     # Load and compile Keras model
-    opt_adam = Adam(learning_rate=lr_rate, decay=0.005)
+    opt_adam = Adam(learning_rate=lr_rate, decay=decay)
     model = keras.models.load_model('pretrained_model')
     model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
     model.fit(x_train, y_train, batch_size = 16, epochs = epoch, verbose=2, validation_data=(x_test, y_test))

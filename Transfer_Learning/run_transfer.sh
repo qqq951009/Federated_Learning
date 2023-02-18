@@ -1,6 +1,6 @@
 #!/bin/bash
 declare -i seer=0
-END=43
+END=102
 for ((seed=42;seed<=END;seed++)); do
     python3 make_encode_map.py --seed=${seed} --seer=$seer
     echo "Start Training Pretrained Model"
@@ -40,6 +40,5 @@ for ((seed=42;seed<=END;seed++)); do
         python3 transfer_learning_finetune.py --seed=${seed} --seer=$seer --hospital=3
         sleep 1
     fi
-
 
 done

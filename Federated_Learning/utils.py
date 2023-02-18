@@ -64,7 +64,6 @@ def imputation_fn(df_train, df_test, imp_method, seed):
     return train_imp, test_imp
 
 def onehot_encoding(df, siteid, train_index, test_index):
-    print(siteid)
     trainset, testset = [], []
     df = pd.get_dummies(df, drop_first=True, columns=df.columns[2:])
     df = df[df['LOC'] == siteid]
@@ -226,9 +225,8 @@ class CifarClient(fl.client.NumPyClient):
         self.METRICS = [metrics.Precision(thresholds=self.set_thres),
                     metrics.Recall(thresholds=self.set_thres),
                     metrics.AUC()]
-        # print(cid, 'site'+str(cid), client_config['lr_rate_custom']['site'+str(cid)])
-        self.opt_adam = Adam(learning_rate=client_config['lr_rate_custom']['site'+str(cid)], decay=client_config['decay'])
-        # self.opt_adam = Adam(learning_rate=0.0001, decay=0.005)         
+        self.opt_adam = Adam(learning_rate=client_config['lr_rate'])   # , decay=client_config['decay']
+
     def get_parameters(self):
         """Get parameters of the local model."""
         raise Exception("Not implemented (server-side parameter initialization)")
@@ -257,13 +255,8 @@ class CifarClient(fl.client.NumPyClient):
             "val_loss": history.history[hist_key_list[4]][0],
             "val_auc": history.history[hist_key_list[7]][0],
         }
-        # self.record+=history.history["val_auc"]
+
         print(config['rnd'])
-        # if config['rnd'] == 20:
-        #     print("output length : ",len(self.record))
-        #     fl_auc_df = pd.read_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv') 
-        #     fl_auc_df[f'seed{self.seed}'] = self.record
-        #     fl_auc_df.to_csv(f'/home/refu0917/lungcancer/remote_output1/output_folder/fl_auc_df{self.cid}.csv',index=False)
             
         return parameters_prime, num_examples_train, results
 
@@ -277,7 +270,7 @@ class CifarClient(fl.client.NumPyClient):
         y_pred = self.model.predict(self.x_test)
         
         # Last round drawlift chart and Evaluate aggregate model on other hospital
-        if config['rnd'] == 30:
+        if config['rnd'] == 20:
             
         # Start evaluate each hospital validation set
             self.auc_val_result[str(self.cid)] = [roc_auc_score(self.y_test,y_pred)]            # Last round result 
@@ -288,9 +281,9 @@ class CifarClient(fl.client.NumPyClient):
             
             print("----------------evaluate---------------")
             print(f'site{self.cid}, AUROC score : {auroc}')
-            '''val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
-            val_df.loc[self.seed,'site'+str(self.cid)+'_temp'] =  auroc
-            val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')'''
+            val_df = pd.read_csv(f'{self.output_file_name}{self.cid}.csv', index_col=[0])
+            val_df.loc[self.seed,'site'+str(self.cid)+'_(1-4/5-4)'] =  auroc
+            val_df.to_csv(f'{self.output_file_name}{self.cid}.csv')
 
         # Evaluate global model parameters on the local test data and return results
         loss,precision,recall,_ = self.model.evaluate(self.x_test, self.y_test)
