@@ -13,42 +13,37 @@ for ((j=42;j<=END;j++)); do
 
 
     echo "Starting client 2"
-    python3 runclient_new.py --hospital=2 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=2 --seed=${j} --seer=${seer} &
     sleep 1
 
     echo "Starting client 3"
-    python3 runclient_new.py --hospital=3 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=3 --seed=${j} --seer=${seer} &
     sleep 1
 
     echo "Starting client 6"
-    python3 runclient_new.py --hospital=6 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=6 --seed=${j} --seer=${seer} &
     sleep 1
 
     echo "Starting client 8"
-    python3 runclient_new.py --hospital=8 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=8 --seed=${j} --seer=${seer} &
     sleep 1
     
     echo "Starting client 9"
-    python3 runclient_new.py --hospital=9 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=9 --seed=${j} --seer=${seer} &
     sleep 1
 
     echo "Starting client 10"
-    python3 runclient_new.py --hospital=10 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=10 --seed=${j} --seer=${seer} &
     sleep 1
 
     echo "Starting client 11"
-    python3 runclient_new.py --hospital=11 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=11 --seed=${j} --seer=${seer} &
     sleep 1
 
     echo "Starting client 12"
-    python3 runclient_new.py --hospital=12 --seed=${j} --seer=${seer} &
+    python3 runclient.py --hospital=12 --seed=${j} --seer=${seer} &
     sleep 1
-    # if (($seer == 1));
-    # then
-    #    echo "Starting client 9"
-    #    python3 runclient_new.py --hospital=9 --seed=${j} --seer=${seer} &
-    #    sleep 1
-    # fi
+
     wait
     
 done

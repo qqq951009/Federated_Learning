@@ -70,6 +70,19 @@ class target_encoding():
         df_target['LOC'] = loc
         return df_target
 
+class onehot_encoding():
+    def __call__(self, df, siteid, train_index, test_index):
+        trainset, testset = [], []
+        df = pd.get_dummies(df.astype(str), drop_first=True, columns=df.columns[2:])
+        df = df[df['LOC'] == str(siteid)]
+        trainset = df.loc[train_index]
+        testset = df.loc[test_index]
+        trainset = trainset.astype(int)
+        testset = testset.astype(int)
+        x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
+        x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
+        return x_train, y_train, x_test, y_test
+
 class train_enc_map():
     def __call__(self, dfenc, dfimp, columns,df):
         trainenc_dict = {}

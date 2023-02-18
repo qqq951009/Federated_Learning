@@ -59,9 +59,46 @@ class target_encoding():
         encoder = TargetEncoder(cols=columns, smoothing=0.05)
         encoder = encoder.fit(x_train, y_train)
         x_train_enc, x_test_enc = encoder.transform(x_train), encoder.transform(x_test)
-        x_test_enc['Class'] = y_test
         x_test_enc['LOC'] = testset['LOC']
+        x_test_enc['Class'] = y_test
         return x_train_enc, y_train, x_test_enc
+
+class onehot_encoding():
+    def __call__(self, trainimp, testimp):
+        df = pd.concat([trainimp, testimp])
+        df_x, df_y = df.drop(columns=['Class', 'LOC']), df['Class']
+        x_enc = pd.get_dummies(df_x.astype(str), drop_first=True)
+        x_train = x_enc.loc[trainimp.index]
+        testset = x_enc.loc[testimp.index]
+        y_train = df_y.loc[trainimp.index]
+        testset['Class'] = df_y.loc[testimp.index]
+        testset['LOC'] = df.loc[testimp.index]['LOC']
+        return  x_train, y_train, testset
+
+def encode(trainset, testset, method):
+    if method == 'onehot':
+        df = pd.concat([trainset, testset])
+        df_x, df_y = df.drop(columns=['Class', 'LOC']), df['Class']
+        x_enc = pd.get_dummies(df_x.astype(str), drop_first=True)
+        x_train_enc = x_enc.loc[trainset.index]
+        testset_enc = x_enc.loc[testset.index]
+        y_train = df_y.loc[trainset.index]
+        testset_enc['Class'] = df_y.loc[testset.index]
+        testset_enc['LOC'] = df.loc[testset.index]['LOC']
+
+    elif method == 'target':
+        columns = trainset.columns[2:]
+        x_train, y_train = trainset.drop(columns=['Class', 'LOC']), trainset['Class']
+        x_test, y_test = testset.drop(columns=['Class', 'LOC']), testset['Class']
+        encoder = TargetEncoder(cols=columns, smoothing=0.05)
+        encoder = encoder.fit(x_train, y_train)
+        x_train_enc, testset_enc = encoder.transform(x_train), encoder.transform(x_test)
+        testset_enc['LOC'] = testset['LOC']
+        testset_enc['Class'] = y_test
+    else:
+        assert method == 'target' or method == 'onehot'
+
+    return x_train_enc, y_train, testset_enc
 
 class sample_method():
     def __init__(self,method,strategy,seed):
@@ -94,6 +131,7 @@ class preprocess():
     def __call__(self,df, site_list):
         train = pd.DataFrame()
         test = pd.DataFrame()
+        df = df.reset_index(drop = True)
         for i in site_list:
             df_site = df[df['LOC'] == i]
             trainset, testset = train_test_split(df_site,test_size = self.size,stratify=df_site['Class'],random_state=self.seed)

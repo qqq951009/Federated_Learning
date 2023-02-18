@@ -16,10 +16,12 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 import utils
+import mlflow.tensorflow
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 parser = argparse.ArgumentParser(description="Flower")
-parser.add_argument("--hospital", type=int, choices=range(0, 100), required=True)
-parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
+parser.add_argument("--hospital", type=int, default=2,choices=range(0, 100))
+parser.add_argument("--seed", type=int, default=42, choices=range(0, 1000))
 parser.add_argument("--seer", type=int, default=0)
 # parser.add_argument("--encode_dict", type=str, required=True)   # put weight or average
 args = parser.parse_args()
@@ -30,12 +32,12 @@ with open('../config.yaml', 'r') as f:
 
 epoch = config['epoch']
 lr_rate = config['lr_rate']
+decay = config['decay']
 size = config['test_size']
-dir_name = config['dir_name']
+dir_name = '/home/refu0917/lungcancer/remote_output1/output_folder/onehot_new/'
 set_thres = config['set_thres']
 
 auc_val_result = {}
-hospital_list = [2,3,6,8]
 
 
 METRICS = [
@@ -52,12 +54,10 @@ random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
 
-# map = utils.mapping()
 drop = utils.drop_year_and_null()
 imputation_fn = utils.imputation()
-
-target_encode = utils.target_encoding()
-#　train_enc_map_fn = utils.train_enc_map()
+# target_encode = utils.target_encoding()
+# onehot_encode = utils.onehot_encoding()
 
 if seer == 1:
     output_file_name = 'local_val_df_seer.csv'
@@ -70,7 +70,7 @@ if seer == 1:
     df = pd.concat([df1, df2])
 
 elif seer == 0:
-    output_file_name = 'local_val_df.csv'
+    output_file_name = f'local_val_df_({lr_rate},{decay}).csv'
     columns = ["Class","LOC", "Gender", "Age", "CIG",
             "ALC", "BN", "MAGN", "AJCCstage", "DIFF", "LYMND",
             "TMRSZ", "OP", "RTDATE", "STDATE", "BMI_label",
@@ -80,7 +80,6 @@ elif seer == 0:
 
 df = df[df['LOC'] == site_id]
 
-# df = drop(df)
 # Split df into train and test set
 trainset, testset = train_test_split(df, test_size = size, stratify = df['Class'], random_state = seed)
 
@@ -88,21 +87,30 @@ trainset, testset = train_test_split(df, test_size = size, stratify = df['Class'
 trainimp, testimp = imputation_fn(trainset, testset, config['imp_method'], seed)
 
 # Encode trainset and map the encode dictionary to testset
-x_train, y_train, x_test, y_test = target_encode(trainimp, testimp)
+x_train, y_train, x_test, y_test = utils.encode(trainimp, testimp, 'onehot')
 
-opt_adam = Adam(learning_rate=lr_rate)
-model = Sequential() 
-model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
-model.add(Dense(16, activation='relu'))
-model.add(Dense(10, activation='relu'))    
-model.add(Dense(1, activation='sigmoid'))
-model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
+def main() -> None:
+    mlflow.tensorflow.autolog()
+    mlflow.set_experiment("Localized (Target_new)")
+    mlflow.set_tag("mlflow.runName", "site"+str(site_id)+'_'+str(seed)+'_('+str(lr_rate)+','+str(decay)+')')
+    # callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=20)
+
+    opt_adam = Adam(learning_rate=lr_rate, decay= decay)  # 
+    model = Sequential() 
+    model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(10, activation='relu'))    
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(optimizer=opt_adam, loss=tf.losses.BinaryFocalCrossentropy(gamma=2.0), metrics=METRICS)
 
 
-hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
-y_pred = model.predict(x_test)
-auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
-val_df = pd.read_csv(dir_name + output_file_name, index_col=[0])
-val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
-val_df.to_csv(dir_name + output_file_name)
-print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')
+    hist = model.fit(x_train,y_train,batch_size=16,epochs=epoch,verbose=2,validation_data=(x_test, y_test))
+    y_pred = model.predict(x_test)
+    auc_val_result[str(site_id)] = [roc_auc_score(y_test, y_pred)]
+    val_df = pd.read_csv(dir_name + output_file_name, index_col=[0])
+    val_df.loc[seed,f'site{site_id}'] = roc_auc_score(y_test, y_pred)
+    val_df.to_csv(dir_name + output_file_name)
+    print(f'AUC by sklearn : {roc_auc_score(y_test,y_pred)}')
+
+if __name__ == "__main__":
+    main()

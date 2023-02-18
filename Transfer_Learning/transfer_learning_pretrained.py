@@ -15,7 +15,8 @@ from tensorflow.keras.layers import Dense, Embedding, Flatten,Dropout
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import roc_auc_score
 import utils
-
+import mlflow.tensorflow
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Parse command line argument `partition`
 parser = argparse.ArgumentParser(description="Flower")
 parser.add_argument("--seed", type=int, choices=range(0, 1000), required=True)
@@ -27,6 +28,7 @@ with open('../config.yaml', 'r') as f:
 
 epoch = config['epoch']
 lr_rate = config['lr_rate']
+decay = config['decay']
 size = config['test_size']
 dir_name = config['dir_name']
 set_thres = config['set_thres']
@@ -57,7 +59,7 @@ elif seer == 0:
             "SSF1", "SSF2", "SSF3", "SSF4", "SSF6"] # "FullDate",
   df = pd.read_csv(config['data_dir']['8hos'],index_col=[0])
   df = df[columns]
-  output_file_name = 'transfer_learning_score.csv'
+  output_file_name = f'transfer_score_({lr_rate},{decay}).csv'
 
 for i in [2,3,6,8,9,10,11,12]:
     tempdf = df[df['LOC'] == i]
@@ -65,7 +67,6 @@ for i in [2,3,6,8,9,10,11,12]:
     index_list.append(i)
 
 def main() -> None:
-    
     METRICS = [
             metrics.Precision(thresholds=set_thres),
             metrics.Recall(thresholds=set_thres),
@@ -89,6 +90,10 @@ def main() -> None:
     dfimp = site_imp_dict[ptr_siteID]
     trainimp, testimp = dfimp['train'],dfimp['test']
     
+    mlflow.tensorflow.autolog()
+    mlflow.set_experiment("Transfer (Target_new)")
+    mlflow.set_tag("mlflow.runName", "site"+str(ptr_siteID)+'_'+str(seed)+'_('+str(lr_rate)+','+str(decay)+')')
+
     # Map the target encoding
     trainenc = map(site_map_dict, trainimp, columns[2:])
     testenc = map(site_map_dict, testimp, columns[2:])
@@ -102,7 +107,7 @@ def main() -> None:
 
 
     # Load and compile Keras model
-    opt_adam = Adam(learning_rate=lr_rate)
+    opt_adam = Adam(learning_rate=lr_rate)  # , decay=decay
     model = Sequential() 
     model.add(Dense(32, activation='relu', input_shape=(x_train.shape[1],))) #,kernel_regularizer='l2'
     model.add(Dense(16, activation='relu'))
